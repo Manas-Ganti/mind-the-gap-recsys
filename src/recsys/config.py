@@ -93,11 +93,9 @@ class GraphCfg(BaseModel):
 
 
 class TwoTowerCfg(BaseModel):
+    text_encoder: str = "sentence-transformers/all-MiniLM-L6-v2"   # frozen (CLAUDE.md decision 1)
+    encode_batch_size: int = 256
     dim: int = 64
-    vocab_size: int = 50000
-    min_count: int = 3
-    title_len: int = 24
-    abstract_len: int = 48
     history_len: int = 30
     temperature: list[float] = [0.05]
     lr: float = 1e-3

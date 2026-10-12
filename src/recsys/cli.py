@@ -1,4 +1,4 @@
-"""`recsys ingest | split | harness-check | train | evaluate | serve | report | all | synth`."""
+"""`recsys ingest | split | harness-check | embed | train | evaluate | serve | report | all | synth`."""
 from __future__ import annotations
 
 import argparse
@@ -18,6 +18,7 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--only", nargs="*", choices=["temporal", "temporal_val", "random"])
     hc = sub.add_parser("harness-check", help="score dummy rankings (random/oracle) under both protocols")
     hc.add_argument("--split", default="temporal", choices=["temporal", "temporal_val", "random"])
+    sub.add_parser("embed", help="encode item text once with the frozen sentence encoder (cached)")
     sub.add_parser("train", help="tune all retrievers on temporal_val, train rankers, refit on eval splits")
     sub.add_parser("evaluate", help="paired protocols, ceilings, end-to-end, popularity -> results/metrics.json")
     sub.add_parser("serve", help="FAISS ANN recall/latency over two-tower embeddings -> results/ann.json")
@@ -37,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     from recsys.config import load_config
     cfg = load_config(a.config)
     cfg.ensure_dirs()
-    steps = ["ingest", "split", "train", "evaluate", "serve", "report"] if a.cmd == "all" else [a.cmd]
+    steps = ["ingest", "split", "embed", "train", "evaluate", "serve", "report"] if a.cmd == "all" else [a.cmd]
     for step in steps:
         print(f"== {step} ==", flush=True)
         if step == "ingest":
@@ -52,6 +53,10 @@ def main(argv: list[str] | None = None) -> int:
             print(format_table(out, cfg.eval.headline_k))
             if not out["checks"]["all_pass"]:
                 return 1
+        elif step == "embed":
+            from recsys.retrieval.text_embed import ensure_item_embeddings, embeddings_path
+            print(ensure_item_embeddings(cfg))
+            print(embeddings_path(cfg).with_suffix(".json").read_text())
         elif step == "train":
             from recsys.pipeline import train
             train(cfg)

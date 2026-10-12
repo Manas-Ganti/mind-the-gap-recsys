@@ -60,9 +60,13 @@ def _protocol_kw(cfg: Config) -> dict:
 
 
 def two_tower_kwargs(cfg: Config) -> dict:
+    from recsys.retrieval.text_embed import embeddings_path
+
     kw = cfg.retrieval.two_tower.model_dump()
-    kw.pop("temperature")
+    for k in ("temperature", "text_encoder", "encode_batch_size"):
+        kw.pop(k)
     kw["seed"] = cfg.seed
+    kw["embeddings_path"] = str(embeddings_path(cfg))
     return kw
 
 
@@ -83,6 +87,34 @@ def _sample_users(users: np.ndarray, n: int, seed: int) -> np.ndarray:
 
 
 # --------------------------------------------------------------------------- tuning
+
+# Boundaries that are natural limits of a parameter, not arbitrary grid ends. A best value on
+# any OTHER boundary means the optimum may lie outside the grid, i.e. the method is not yet
+# tuned seriously; it is flagged in tuning.json and the report.
+NATURAL_BOUNDS = {
+    "popular": {"window_hours": (None, "all-time")},
+    "itemknn": {"shrink": (0.0, None), "alpha": (0.0, 1.0)},
+    "graph": {"beta": (0.0, None)},
+}
+
+
+def grid_edges(method: str, best: dict, grid: list[dict]) -> list[str]:
+    """Parameters whose best value sits on a non-natural edge of the evaluated grid."""
+    flagged = []
+    natural = NATURAL_BOUNDS.get(method, {})
+    for key, val in best.items():
+        values = {g["params"][key] for g in grid}
+        numeric = sorted(v for v in values if v is not None)
+        if len(values) < 2 or val is None:
+            continue
+        lo_nat, hi_nat = natural.get(key, (None, None))
+        hi = None if None in values else numeric[-1]      # None (all-time) is the top of the range
+        if val == numeric[0] and val != lo_nat:
+            flagged.append(f"{key}={val} (lowest tried)")
+        elif hi is not None and val == hi and val != hi_nat:
+            flagged.append(f"{key}={val} (highest tried)")
+    return flagged
+
 
 def tune(cfg: Config, val: SplitData) -> tuple[dict, dict[str, Retriever]]:
     """Grid-search every retriever on temporal_val. Baselines first, neural last."""
@@ -107,9 +139,13 @@ def tune(cfg: Config, val: SplitData) -> tuple[dict, dict[str, Retriever]]:
             if v > best_val:
                 best_val, best_r = v, r
         best[name] = best_r
-        out["methods"][name] = {"grid_size": len(rows), "grid": rows,
-                                "best": rows[int(np.argmax([x[metric] for x in rows]))]["params"],
-                                "best_value": best_val, "started_at": _iso(started), "completed_at": _iso(_now())}
+        best_params = rows[int(np.argmax([x[metric] for x in rows]))]["params"]
+        edges = grid_edges(name, best_params, rows)
+        if edges:
+            print(f"  [tune] WARNING {name}: best is on a grid edge: {edges}. Widen the grid in configs/.", flush=True)
+        out["methods"][name] = {"grid_size": len(rows), "grid": rows, "best": best_params,
+                                "best_value": best_val, "at_grid_edge": edges,
+                                "started_at": _iso(started), "completed_at": _iso(_now())}
         write_json(path, out)
 
     pc, ic, gc, tc = cfg.retrieval.popular, cfg.retrieval.itemknn, cfg.retrieval.graph, cfg.retrieval.two_tower
@@ -146,7 +182,10 @@ def train(cfg: Config) -> dict:
     from recsys.ranking.gbdt import GBDTRanker
     from recsys.ranking.neural import NeuralRanker
 
+    from recsys.retrieval.text_embed import ensure_item_embeddings
+
     cfg.ensure_dirs()
+    ensure_item_embeddings(cfg)            # no-op when the `embed` stage already cached them
     val = load_split(cfg, "temporal_val")
     tuning, best_val = tune(cfg, val)
 

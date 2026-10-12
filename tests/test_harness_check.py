@@ -50,3 +50,20 @@ def test_config_extends_inherits_protocol_and_overrides_machine():
     assert arc.spark.master == "local[96]" and arc.spark.driver_memory == "48g"
     assert arc.split == base.split and arc.eval == base.eval and arc.retrieval == base.retrieval
     assert arc.paths == base.paths and arc.seed == base.seed
+
+
+def test_grid_edge_detection():
+    from recsys.pipeline import grid_edges
+
+    grid = [{"params": {"neighbors": n, "shrink": s, "alpha": a}} for n in (50, 500) for s in (0.0, 10.0) for a in (0.3, 0.7)]
+    # neighbors=500 and alpha=0.7 are arbitrary top edges; shrink=0 is a natural floor
+    assert grid_edges("itemknn", {"neighbors": 500, "shrink": 0.0, "alpha": 0.7}, grid) == \
+        ["neighbors=500 (highest tried)", "alpha=0.7 (highest tried)"]
+    full = grid + [{"params": {"neighbors": 50, "shrink": 0.0, "alpha": 1.0}}]
+    # alpha=1.0 is the natural top of [0, 1], so only neighbors and shrink are flagged
+    assert grid_edges("itemknn", {"neighbors": 50, "shrink": 10.0, "alpha": 1.0}, full) == \
+        ["neighbors=50 (lowest tried)", "shrink=10.0 (highest tried)"]
+    w = [{"params": {"window_hours": h}} for h in (3, 6, None)]
+    assert grid_edges("popular", {"window_hours": 3}, w) == ["window_hours=3 (lowest tried)"]
+    assert grid_edges("popular", {"window_hours": None}, w) == []        # all-time is the natural top
+    assert grid_edges("popular", {"window_hours": 6}, w) == []

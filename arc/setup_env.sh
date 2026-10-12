@@ -36,6 +36,10 @@ PY="$ENV/bin/python"
 "$PY" -c "import recsys, pyspark, lightgbm, torch, faiss, sklearn, yaml; print('imports OK', torch.__version__, pyspark.__version__)"
 JAVA_HOME="$ENV/lib/jvm"; [ -x "$JAVA_HOME/bin/java" ] || JAVA_HOME="$ENV"
 "$JAVA_HOME/bin/java" -version
+# Pre-download the frozen text encoder into HF_HOME (jobs run with HF_HUB_OFFLINE=1).
+export HF_HOME="${HF_HOME:-/home/$USER/hf_cache}"
+ENC="$("$PY" -c "from recsys.config import load_config; print(load_config('configs/config.yaml').retrieval.two_tower.text_encoder)")"
+"$PY" -c "from sentence_transformers import SentenceTransformer as S; m = S('$ENC', device='cpu'); print('encoder cached:', '$ENC', m.get_sentence_embedding_dimension(), 'd')"
 echo "find zero-byte binaries (must print nothing):"; find "$ENV/bin" -type f -size 0
 echo "Now run the tests on a compute node, or here if the login node allows a short run:"
 echo "  JAVA_HOME=$JAVA_HOME $PY -m pytest -q"

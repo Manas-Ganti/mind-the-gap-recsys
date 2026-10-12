@@ -4,7 +4,7 @@
 #
 #   arc/pipeline.slurm --config configs/arc_mind_small.yaml ingest split harness-check
 #
-# Stages: ingest split harness-check train evaluate serve report
+# Stages: ingest split harness-check embed train evaluate serve report
 #SBATCH --job-name=recsys
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,14 +17,14 @@
 set -euo pipefail
 # SLURM runs a spool copy of this file, so resolve the repo from the submit dir.
 source "${SLURM_SUBMIT_DIR:-$PWD}/arc/arc_env.sh"
-arc_require recsys pyspark pandas pyarrow scipy sklearn lightgbm torch faiss matplotlib yaml
+arc_require recsys pyspark pandas pyarrow scipy sklearn lightgbm torch faiss matplotlib yaml sentence_transformers
 
 CONFIG=""
 STAGES=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --config) CONFIG="$2"; shift 2 ;;
-    ingest|split|harness-check|train|evaluate|serve|report) STAGES+=("$1"); shift ;;
+    ingest|split|harness-check|embed|train|evaluate|serve|report) STAGES+=("$1"); shift ;;
     *) echo "[pipeline] FATAL: unknown argument '$1'" >&2; exit 2 ;;
   esac
 done

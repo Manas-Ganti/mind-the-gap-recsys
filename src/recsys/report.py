@@ -419,6 +419,7 @@ def report(cfg: Config) -> dict:
     if tuning:
         md += ["## Tuning (temporal_val)", ""] + [
             f"- **{m}**: {t['grid_size']} grid points, best {t['best']} -> {tuning['metric']} = {_f(t['best_value'])}"
+            + (f" — **WARNING: best on a grid edge: {', '.join(t['at_grid_edge'])}**" if t.get("at_grid_edge") else "")
             for m, t in tuning["methods"].items()] + [""]
     if ann:
         md += ["## ANN serving", "", "| index | setting | recall | p50 ms | p95 ms | p99 ms |", "|---" * 6 + "|",

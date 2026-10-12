@@ -20,6 +20,7 @@ dependencies = [
     "matplotlib>=3.7",
     "pydantic>=2.0",
     "pyyaml>=6.0",       # configs/config.yaml
+    "sentence-transformers>=3.0",  # frozen all-MiniLM-L6-v2 item text encoder (CLAUDE.md decision 1)
 ]
 
 [project.optional-dependencies]

@@ -46,11 +46,9 @@ retrieval:
   itemknn: {neighbors: [20, 50], shrink: [0, 10], alpha: [0.5]}
   graph: {neighbors: [50], alpha: [1.0], beta: [0.0, 0.5]}
   two_tower:
+    text_encoder: sentence-transformers/all-MiniLM-L6-v2
+    encode_batch_size: 64
     dim: 16
-    vocab_size: 2000
-    min_count: 1
-    title_len: 8
-    abstract_len: 16
     history_len: 10
     temperature: [0.1]
     batch_size: 64

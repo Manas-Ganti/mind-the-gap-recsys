@@ -44,23 +44,23 @@ retrieval:
   tuning_metric: ndcg@10     # full-catalog, user-level, on temporal_val
   tuning_users: 5000
   popular:
-    window_hours: [3, 6, 12, 24, 72, null]   # null = all time incl. pre-window history
+    window_hours: [0.5, 1, 2, 3, 6, 12, 24, 72, null]   # null = all time incl. pre-window history
   itemknn:
-    neighbors: [50, 100, 200, 500]
+    # Widened 2026-10-12 after the first MIND-small tuning run put the best point on the grid
+    # edge (neighbors=500, alpha=0.7) on temporal_val. Validation only; test never seen.
+    neighbors: [50, 100, 200, 500, 1000, 2000]
     shrink: [0, 10, 50, 200]
-    alpha: [0.3, 0.5, 0.7]                   # 0.5 = cosine; asymmetric otherwise
+    alpha: [0.3, 0.5, 0.7, 0.85, 1.0]        # 0.5 = cosine; asymmetric otherwise; [0,1] is the full range
   graph:                                     # RP3beta item graph
-    neighbors: [100, 300]
+    neighbors: [100, 300, 1000, 2000]        # widened 2026-10-12: best was the top edge (300) on temporal_val
     alpha: [0.5, 0.8, 1.0]
     beta: [0.0, 0.2, 0.4, 0.6]
   two_tower:
+    text_encoder: sentence-transformers/all-MiniLM-L6-v2   # frozen; never fine-tuned (CLAUDE.md decision 1)
+    encode_batch_size: 256
     dim: 64
-    vocab_size: 50000
-    min_count: 3
-    title_len: 24
-    abstract_len: 48
     history_len: 30
-    temperature: [0.05, 0.1]
+    temperature: [0.02, 0.05, 0.1]          # widened 2026-10-12: best was the low edge (0.05) on temporal_val
     lr: 1.0e-3
     weight_decay: 1.0e-5
     batch_size: 1024
@@ -90,7 +90,7 @@ ranking:
     hidden: [128, 64]
     dropout: 0.1
     lr: 1.0e-3
-    epochs: 20
+    epochs: 60                 # raised 2026-10-12: valid NDCG still rising at the old cap (20); early stopping ends it
     batch_users: 128
     patience: 3
     device: auto

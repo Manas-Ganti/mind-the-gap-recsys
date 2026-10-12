@@ -172,9 +172,11 @@ tests/                every metric vs hand-worked / sklearn references; leakage;
   model, which gets a temperature sweep. This biases *against* the neural model, which is
   the conservative direction for the claim being tested. If the neural model wins anyway,
   the win is understated rather than overstated.
-- **The two-tower text encoder is trained from scratch** (bag of words + category). A
-  pretrained text encoder would likely help cold items, but it would add a dependency
-  outside the agreed set.
+- **The two-tower item text encoder is frozen** (all-MiniLM-L6-v2, per the project
+  decisions in `CLAUDE.md`). Only a projection and the user tower are trained. A fine-tuned
+  encoder would probably do better on news-specific semantics. Freezing it keeps the
+  neural model cheap and leaves the comparison about retrieval design, not language-model
+  fine-tuning.
 - **The rankers are trained on one validation day** of candidates from retrievers fitted on
   less data than the test-time retrievers, so there is a small train/serve feature skew.
 - **The ANN benchmark measures single-thread, in-process latency** on the local machine. It

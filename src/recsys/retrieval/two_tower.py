@@ -1,8 +1,10 @@
-"""Two-tower retrieval with a text item tower.
+"""Two-tower retrieval with a frozen-text item tower (CLAUDE.md decision 1).
 
-Item tower: mean-pooled word embeddings of title and abstract + category and subcategory
-            embeddings -> MLP -> L2-normalised vector. It is purely content-based, so it can
-            embed items with no clicks. In news, most of the live catalog is such items.
+Item tower: frozen all-MiniLM-L6-v2 embedding of `title. abstract` (precomputed once, see
+            text_embed.py) + learned category and subcategory embeddings -> MLP ->
+            L2-normalised vector. Purely content-based, so it embeds items with no clicks;
+            in news, most of the live catalog is such items. The language model is never
+            fine-tuned: only the projection MLP and category embeddings learn.
 User tower: additive-attention pooling over the item-tower vectors of the user's last
             `history_len` clicks (plus a learned "empty" slot so cold users are defined)
             -> linear -> L2-normalised. No user-ID embedding, so it is fully inductive.
@@ -12,14 +14,11 @@ Loss:       in-batch sampled softmax, temperature tau, with logQ correction (Yi 
 
 Training examples are (prefix of the user's chronological train sequence -> next click), so
 the model never conditions on a click that came after the one it predicts.
-
-The vocabulary is built from items in the training sequences only.
 """
 from __future__ import annotations
 
-import re
 import time
-from collections import Counter
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -29,44 +28,16 @@ import torch.nn.functional as F
 from recsys.config import device_for
 from recsys.retrieval.base import Retriever
 
-TOKEN_RE = re.compile(r"[a-z0-9']+")
-PAD, OOV = 0, 1
-
-
-def tokenize(text: str) -> list[str]:
-    return TOKEN_RE.findall((text or "").lower())
-
-
-def build_vocab(texts, max_size: int, min_count: int) -> dict[str, int]:
-    c = Counter(tok for t in texts for tok in tokenize(t))
-    words = [w for w, n in sorted(c.items(), key=lambda x: (-x[1], x[0])) if n >= min_count][: max_size - 2]
-    return {w: j + 2 for j, w in enumerate(words)}
-
-
-def encode_text(texts, vocab: dict[str, int], length: int) -> np.ndarray:
-    out = np.zeros((len(texts), length), dtype=np.int64)
-    for r, t in enumerate(texts):
-        ids = [vocab.get(w, OOV) for w in tokenize(t)][:length]
-        out[r, :len(ids)] = ids
-    return out
-
 
 class ItemTower(nn.Module):
-    def __init__(self, vocab_size: int, n_cat: int, n_sub: int, dim: int):
+    def __init__(self, text_dim: int, n_cat: int, n_sub: int, dim: int):
         super().__init__()
-        self.word = nn.Embedding(vocab_size, dim, padding_idx=PAD)
         self.cat = nn.Embedding(n_cat, dim)
         self.sub = nn.Embedding(n_sub, dim)
-        self.mlp = nn.Sequential(nn.Linear(4 * dim, 2 * dim), nn.ReLU(), nn.Linear(2 * dim, dim))
+        self.mlp = nn.Sequential(nn.Linear(text_dim + 2 * dim, 2 * dim), nn.ReLU(), nn.Linear(2 * dim, dim))
 
-    @staticmethod
-    def _mean(emb: torch.Tensor, ids: torch.Tensor) -> torch.Tensor:
-        mask = (ids != PAD).unsqueeze(-1).float()
-        return (emb * mask).sum(1) / mask.sum(1).clamp(min=1.0)
-
-    def forward(self, title, abstract, cat, sub):
-        x = torch.cat([self._mean(self.word(title), title), self._mean(self.word(abstract), abstract),
-                       self.cat(cat), self.sub(sub)], dim=-1)
+    def forward(self, text, cat, sub):
+        x = torch.cat([text, self.cat(cat), self.sub(sub)], dim=-1)
         return F.normalize(self.mlp(x), dim=-1)
 
 
@@ -87,45 +58,49 @@ class UserTower(nn.Module):
 
 
 class TwoTowerNet(nn.Module):
-    def __init__(self, vocab_size: int, n_cat: int, n_sub: int, dim: int):
+    def __init__(self, text_dim: int, n_cat: int, n_sub: int, dim: int):
         super().__init__()
-        self.items = ItemTower(vocab_size, n_cat, n_sub, dim)
+        self.items = ItemTower(text_dim, n_cat, n_sub, dim)
         self.users = UserTower(dim)
 
 
 class TwoTowerRetriever(Retriever):
     name = "two_tower"
 
-    def __init__(self, temperature: float = 0.05, *, dim=64, vocab_size=50000, min_count=3,
-                 title_len=24, abstract_len=48, history_len=30, lr=1e-3, weight_decay=1e-5,
-                 batch_size=1024, epochs=3, max_steps_per_epoch=3000, logq_correction=True,
-                 device="auto", seed=42):
+    def __init__(self, temperature: float = 0.05, *, embeddings_path: str | Path, dim=64,
+                 history_len=30, lr=1e-3, weight_decay=1e-5, batch_size=1024, epochs=3,
+                 max_steps_per_epoch=3000, logq_correction=True, device="auto", seed=42):
         super().__init__(temperature=temperature, dim=dim, epochs=epochs, batch_size=batch_size, lr=lr)
         self.temperature = temperature
-        self.dim, self.vocab_size, self.min_count = dim, vocab_size, min_count
-        self.title_len, self.abstract_len, self.history_len = title_len, abstract_len, history_len
+        self.embeddings_path = str(embeddings_path)
+        self.dim, self.history_len = dim, history_len
         self.lr, self.weight_decay, self.batch_size = lr, weight_decay, batch_size
         self.epochs, self.max_steps_per_epoch = epochs, max_steps_per_epoch
         self.logq_correction, self.device_name, self.seed = logq_correction, device, seed
 
     # ------------------------------------------------------------------ features
+    @property
+    def text_(self) -> torch.Tensor:
+        """Frozen item text embeddings (n_items, text_dim). Loaded lazily and never pickled."""
+        t = self.__dict__.get("_text")
+        if t is None:
+            t = torch.from_numpy(np.load(self.embeddings_path).astype(np.float32))
+            self.__dict__["_text"] = t
+        return t
+
     def _item_features(self, data):
         news = data.news
-        train_items = np.unique(data.train["i"].to_numpy())
-        vocab = build_vocab((news["title"].iloc[train_items] + " " + news["abstract"].iloc[train_items]).tolist(),
-                            self.vocab_size, self.min_count)
+        if self.text_.shape[0] != data.n_items:
+            raise ValueError(f"text embeddings cover {self.text_.shape[0]} items, split has {data.n_items}")
         cats = {c: j for j, c in enumerate(sorted(news["category"].unique()))}
         subs = {c: j for j, c in enumerate(sorted(news["subcategory"].unique()))}
-        self.vocab_, self.cats_, self.subs_ = vocab, cats, subs
-        self.title_ = torch.from_numpy(encode_text(news["title"].tolist(), vocab, self.title_len))
-        self.abstract_ = torch.from_numpy(encode_text(news["abstract"].tolist(), vocab, self.abstract_len))
+        self.cats_, self.subs_ = cats, subs
         self.cat_ = torch.from_numpy(news["category"].map(cats).to_numpy(np.int64).copy())
         self.sub_ = torch.from_numpy(news["subcategory"].map(subs).to_numpy(np.int64).copy())
 
     def _encode_items(self, idx: torch.Tensor, dev) -> torch.Tensor:
         idx = idx.cpu()
-        return self.net_.items(self.title_[idx].to(dev), self.abstract_[idx].to(dev),
-                               self.cat_[idx].to(dev), self.sub_[idx].to(dev))
+        return self.net_.items(self.text_[idx].to(dev), self.cat_[idx].to(dev), self.sub_[idx].to(dev))
 
     def _encode_users(self, hist: np.ndarray, dev) -> torch.Tensor:
         """hist: (B, H) item indices, -1 padded."""
@@ -142,7 +117,7 @@ class TwoTowerRetriever(Retriever):
         rng = np.random.default_rng(self.seed)
         dev = torch.device(device_for(self.device_name))
         self._item_features(data)
-        self.net_ = TwoTowerNet(len(self.vocab_) + 2, len(self.cats_), len(self.subs_), self.dim).to(dev)
+        self.net_ = TwoTowerNet(self.text_.shape[1], len(self.cats_), len(self.subs_), self.dim).to(dev)
         opt = torch.optim.AdamW(self.net_.parameters(), lr=self.lr, weight_decay=self.weight_decay)
 
         seq_items, seq_ptr = data._sequences
@@ -216,6 +191,7 @@ class TwoTowerRetriever(Retriever):
     def __getstate__(self):
         s = self.__dict__.copy()
         s.pop("data_", None)        # re-attached by `attach` after loading
+        s.pop("_text", None)        # reloaded from embeddings_path on first use
         return s
 
     def attach(self, data) -> "TwoTowerRetriever":

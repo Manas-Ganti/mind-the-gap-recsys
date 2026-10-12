@@ -67,6 +67,9 @@ export TOKENIZERS_PARALLELISM=false
 
 # ---- caches: /home, not /projects (/projects/$USER is not writable here) ---------- #
 export HF_HOME="${HF_HOME:-/home/$USER/hf_cache}"
+# The encoder is pre-downloaded by setup_env.sh on the login node; jobs never fetch, so a
+# compute node without internet (or a slow hub) cannot hang or silently change the model.
+export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 
 # ---- optional Telegram notifications ------------------------------------------- #
 # Reuses the VLM project's secrets file if present (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID).
