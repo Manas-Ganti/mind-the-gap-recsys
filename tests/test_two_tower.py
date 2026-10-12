@@ -64,3 +64,17 @@ def test_embedding_matrix_must_cover_item_index(tmp_path):
 def test_item_texts_format():
     news = pd.DataFrame({"title": ["A title", "B", ""], "abstract": ["Some abstract.", "", ""]})
     assert item_texts(news) == ["A title. Some abstract", "B", ""]
+
+
+def test_training_runs_in_deterministic_mode_and_restores_it(tmp_path, monkeypatch):
+    import torch
+
+    d, path = _split_and_embeddings(tmp_path)
+    seen = []
+    model = _model(path)
+    original = model._fit
+    monkeypatch.setattr(model, "_fit", lambda data: (seen.append(torch.are_deterministic_algorithms_enabled()), original(data))[1])
+    before = torch.are_deterministic_algorithms_enabled()
+    model.fit(d)
+    assert seen == [True]
+    assert torch.are_deterministic_algorithms_enabled() == before

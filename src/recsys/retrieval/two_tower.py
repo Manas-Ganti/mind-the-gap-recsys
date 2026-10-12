@@ -25,7 +25,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from recsys.config import device_for
+from recsys.config import deterministic_torch, device_for
 from recsys.retrieval.base import Retriever
 
 
@@ -112,6 +112,10 @@ class TwoTowerRetriever(Retriever):
 
     # ------------------------------------------------------------------ training
     def fit(self, data) -> "TwoTowerRetriever":
+        with deterministic_torch():
+            return self._fit(data)
+
+    def _fit(self, data) -> "TwoTowerRetriever":
         self.started_at = time.time()
         torch.manual_seed(self.seed)
         rng = np.random.default_rng(self.seed)

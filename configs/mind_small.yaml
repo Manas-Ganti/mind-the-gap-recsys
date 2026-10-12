@@ -61,14 +61,14 @@ retrieval:
     encode_batch_size: 256
     dim: 64
     history_len: 30
-    temperature: [0.02, 0.05, 0.1]          # widened 2026-10-12: best was the low edge (0.05) on temporal_val
+    temperature: [0.02, 0.05, 0.1, 0.2]     # widened 2026-10-12 after edge hits on temporal_val (0.05, then 0.1)
     lr: 1.0e-3
     weight_decay: 1.0e-5
     batch_size: 1024
     epochs: 3
     max_steps_per_epoch: 3000
     logq_correction: true
-    device: auto             # auto | cpu | mps | cuda
+    device: cpu              # cpu: bit-reproducible with deterministic kernels (MPS is not); ARC is CPU-only
 
 ranking:
   max_train_users: 50000
@@ -94,7 +94,7 @@ ranking:
     epochs: 60                 # raised 2026-10-12: valid NDCG still rising at the old cap (20); early stopping ends it
     batch_users: 128
     patience: 3
-    device: auto
+    device: cpu
 
 serve:
   k: 100

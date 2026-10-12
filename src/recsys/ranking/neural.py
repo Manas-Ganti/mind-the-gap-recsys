@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from recsys.config import device_for
+from recsys.config import deterministic_torch, device_for
 from recsys.eval.metrics import ndcg_at_k
 from recsys.ranking.features import CandidateBlock
 
@@ -53,6 +53,10 @@ class NeuralRanker:
         return ((X - self.mu_) / self.sd_).astype(np.float32)
 
     def fit(self, train: CandidateBlock, valid: CandidateBlock, feature_names: list[str]) -> "NeuralRanker":
+        with deterministic_torch():
+            return self._fit(train, valid, feature_names)
+
+    def _fit(self, train: CandidateBlock, valid: CandidateBlock, feature_names: list[str]) -> "NeuralRanker":
         torch.manual_seed(self.seed)
         rng = np.random.default_rng(self.seed)
         dev = torch.device(device_for(self.device_name))
