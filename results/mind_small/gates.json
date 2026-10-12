@@ -1,0 +1,66 @@
+{
+  "A": {
+    "pass": true,
+    "detail": {
+      "popular": {
+        "temporal": {
+          "recall@10": 0.07397537169379469,
+          "ndcg@10": 0.0351228418894257
+        },
+        "random": {
+          "recall@10": 0.1299874007936508,
+          "ndcg@10": 0.0742394967605237
+        },
+        "pass": true
+      },
+      "itemknn": {
+        "temporal": {
+          "recall@10": 0.004497728750008162,
+          "ndcg@10": 0.0027171980833014457
+        },
+        "random": {
+          "recall@10": 0.021419206349206348,
+          "ndcg@10": 0.012346146088865365
+        },
+        "pass": true
+      },
+      "graph": {
+        "temporal": {
+          "recall@10": 0.006017830474264298,
+          "ndcg@10": 0.0035352964865615045
+        },
+        "random": {
+          "recall@10": 0.04077680555555555,
+          "ndcg@10": 0.026317926171390737
+        },
+        "pass": true
+      },
+      "two_tower": {
+        "temporal": {
+          "recall@10": 0.008146588615987594,
+          "ndcg@10": 0.004125942374744433
+        },
+        "random": {
+          "recall@10": 0.15368766053391056,
+          "ndcg@10": 0.08805561820645516
+        },
+        "pass": true
+      }
+    }
+  },
+  "B": {
+    "pass": true,
+    "missing": []
+  },
+  "C": {
+    "pass": true,
+    "declared_grid": 120,
+    "evaluated_grid": 120,
+    "itemknn_completed_at": "2026-10-12T22:15:44.758921+00:00",
+    "two_tower_started_at": "2026-10-12T22:18:00.528944+00:00"
+  },
+  "D": {
+    "pass": true,
+    "problems": []
+  }
+}
