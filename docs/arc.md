@@ -14,6 +14,8 @@ it once wasted an allocation.
 bind 'set enable-bracketed-paste off'          # VS Code terminals corrupt pastes otherwise
 git clone <repo-url> ~/ondemand/data/mind-the-gap-recsys && cd ~/ondemand/data/mind-the-gap-recsys
 bash arc/setup_env.sh                          # conda env at ~/miniconda3/envs/recsys (python 3.12, openjdk 17, CPU torch)
+# The env path is RECSYS_ENV (default above). CONDA_ENV is deliberately ignored: other
+# projects export it from ~/.bashrc. The scripts only use an env that carries .recsys-env.
 sacctmgr show assoc user=$USER format=account%30,qos%80   # which allocation is live?
 quota                                          # ~20 GB needed for MIND-large + outputs
 ```

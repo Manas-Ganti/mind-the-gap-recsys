@@ -8,7 +8,12 @@
 # ---- interpreter: absolute path, never `conda activate` --------------------- #
 # `conda activate` in a batch shell can report success without switching interpreters,
 # and a bare `python` once resolved to a 0-byte binary that "completed" jobs in 2 s.
-export CONDA_ENV="${CONDA_ENV:-$HOME/miniconda3/envs/recsys}"
+# RECSYS_ENV, not CONDA_ENV: other projects export CONDA_ENV from ~/.bashrc.
+export CONDA_ENV="${RECSYS_ENV:-$HOME/miniconda3/envs/recsys}"
+if [ ! -f "$CONDA_ENV/.recsys-env" ]; then
+  echo "[arc_env] FATAL: $CONDA_ENV is not this project's env (no .recsys-env marker); run arc/setup_env.sh" >&2
+  return 1 2>/dev/null || exit 1
+fi
 case "$CONDA_ENV" in /*) ;; *) echo "[arc_env] FATAL: CONDA_ENV must be an absolute path" >&2; return 1 2>/dev/null || exit 1 ;; esac
 export PY="$CONDA_ENV/bin/python"
 export CONDA_PREFIX="$CONDA_ENV"

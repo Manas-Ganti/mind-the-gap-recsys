@@ -6,14 +6,25 @@
 # CPU-only torch: the pipeline runs on OWL CPU nodes, and an unpinned torch now pulls a
 # CUDA-13 build that does not match ARC's CUDA 12.6 module anyway.
 # Java comes from conda-forge (openjdk 17, supported by Spark 3.5) so no ARC module is needed.
+#
+# The env path comes from RECSYS_ENV, never the generic CONDA_ENV: other projects export
+# CONDA_ENV from ~/.bashrc, and honouring it once installed this project into the VLM env.
+# An env is only ever installed into if this script created it (marker file).
 set -euo pipefail
-ENV="${CONDA_ENV:-$HOME/miniconda3/envs/recsys}"
+ENV="${RECSYS_ENV:-$HOME/miniconda3/envs/recsys}"
+MARKER="$ENV/.recsys-env"
+export PYTHONNOUSERSITE=1          # never resolve packages from ~/.local
 CONDA="${CONDA_EXE:-$HOME/miniconda3/bin/conda}"
 cd "$(git rev-parse --show-toplevel)"
 
 [ -x "$CONDA" ] || { echo "conda not found at $CONDA (set CONDA_EXE)" >&2; exit 1; }
-if [ ! -x "$ENV/bin/python" ]; then
+if [ ! -e "$ENV" ]; then
   "$CONDA" create -y -p "$ENV" -c conda-forge --override-channels python=3.12 openjdk=17
+  echo "created by arc/setup_env.sh for mind-the-gap-recsys" > "$MARKER"
+elif [ ! -f "$MARKER" ]; then
+  echo "[setup] REFUSING: $ENV exists but was not created by this script (no $MARKER)." >&2
+  echo "[setup] It may belong to another project. Set RECSYS_ENV to a new path." >&2
+  exit 1
 fi
 PY="$ENV/bin/python"
 "$PY" -V
