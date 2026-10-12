@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recsys"
+version = "0.1.0"
+description = "Two-stage recommender on MIND with an honest evaluation protocol"
+requires-python = ">=3.10"
+dependencies = [
+    "pyspark>=3.5,<4",
+    "pandas>=2.0",
+    "pyarrow>=14",       # parquet reader for pandas (required by pandas>=3 anyway)
+    "numpy>=1.24",
+    "scipy>=1.10",       # sparse matrices; already a hard dependency of scikit-learn
+    "scikit-learn>=1.3",
+    "lightgbm>=4.0",
+    "torch>=2.1",
+    "faiss-cpu>=1.7.4",
+    "matplotlib>=3.7",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",       # configs/config.yaml
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+recsys = "recsys.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["spark: needs a local JVM + pyspark (skipped when unavailable)"]

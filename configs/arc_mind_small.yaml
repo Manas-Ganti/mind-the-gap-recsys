@@ -1,0 +1,8 @@
+# MIND-small on a VT ARC OWL Genoa node (96 cores). Inherits the whole protocol from
+# mind_small.yaml; only machine settings change. Outputs land in the same results/mind_small/.
+extends: mind_small.yaml
+
+spark:
+  master: "local[96]"
+  driver_memory: 48g          # keep < the job's --mem (Spark + Python share the allocation)
+  shuffle_partitions: 192

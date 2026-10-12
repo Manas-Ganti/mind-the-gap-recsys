@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+data/raw/
+data/processed/
+data/models/
+smoke/
+spark-warehouse/
+metastore_db/
+derby.log
+data/processed_small/
+data/models_small/
+logs/
+# Runbooks copied from the VLM project: they carry an email address and allocation names,
+# so they stay local. docs/arc.md is this project's tracked, de-identified version.
+arc_runbook.md
+arc_quickref.md

@@ -1,0 +1,51 @@
+{
+  "variant": "small",
+  "raw_splits": [
+    "train",
+    "dev"
+  ],
+  "users": 94057,
+  "items": 65238,
+  "impressions": 230117,
+  "impression_rows": 8584442,
+  "clicks": 347727,
+  "users_with_impressions": 94057,
+  "items_shown": 22771,
+  "min_ts": 1573257619,
+  "max_ts": 1573862283,
+  "items_clicked": 9100,
+  "history_user_item_pairs": 2012565,
+  "positive_user_item_pairs": 2356550,
+  "ctr": 0.04050665145154455,
+  "sparsity": 0.9996159525393811,
+  "per_day": {
+    "2019-11-09": {
+      "impressions": 13570,
+      "clicks": 20179
+    },
+    "2019-11-10": {
+      "impressions": 15048,
+      "clicks": 21774
+    },
+    "2019-11-11": {
+      "impressions": 32799,
+      "clicks": 48077
+    },
+    "2019-11-12": {
+      "impressions": 33654,
+      "clicks": 51528
+    },
+    "2019-11-13": {
+      "impressions": 31624,
+      "clicks": 47961
+    },
+    "2019-11-14": {
+      "impressions": 30270,
+      "clicks": 46825
+    },
+    "2019-11-15": {
+      "impressions": 73152,
+      "clicks": 111383
+    }
+  }
+}

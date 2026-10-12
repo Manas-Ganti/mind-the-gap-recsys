@@ -1,0 +1,78 @@
+# Pipeline smoke test on synthetic MIND-format data (`recsys synth --out smoke/raw`).
+# Everything lands under smoke/. These numbers are NOT results and never go in the README.
+seed: 7
+
+paths:
+  raw_dir: smoke/raw
+  processed_dir: smoke/processed
+  models_dir: smoke/models
+  results_dir: smoke/results
+  figures_dir: smoke/figures
+
+data:
+  variant: small
+  raw_splits: [train, dev]
+
+spark:
+  master: "local[2]"
+  driver_memory: 2g
+  shuffle_partitions: 4
+
+split:
+  temporal_cutoff: "2019-11-15 00:00:00"
+  validation_cutoff: "2019-11-14 00:00:00"
+  random_test_fraction: null
+  exclude_train_seen: true
+  history_policy: snapshot                   # see config.py; asserted in the split audit
+  catalog: live                              # live = items shown on the click's day (same rule every split)
+  max_eval_users: 200
+  max_val_users: 200
+
+eval:
+  ks: [5, 10, 20]
+  headline_k: 10
+  n_negatives: 20
+  negative_oversample: 3.0
+  user_batch: 64
+  tie_noise: 1.0e-9
+  popularity_gamma: 0.5
+  bootstrap: 50
+
+retrieval:
+  candidates_k: 30
+  tuning_metric: ndcg@10
+  tuning_users: 100
+  popular: {window_hours: [24, null]}
+  itemknn: {neighbors: [20, 50], shrink: [0, 10], alpha: [0.5]}
+  graph: {neighbors: [50], alpha: [1.0], beta: [0.0, 0.5]}
+  two_tower:
+    dim: 16
+    vocab_size: 2000
+    min_count: 1
+    title_len: 8
+    abstract_len: 16
+    history_len: 10
+    temperature: [0.1]
+    batch_size: 64
+    epochs: 1
+    max_steps_per_epoch: 20
+    device: cpu
+
+ranking:
+  max_train_users: 200
+  valid_fraction: 0.3
+  gbdt:
+    num_boost_round: 30
+    early_stopping_rounds: 10
+    params: {objective: lambdarank, metric: ndcg, eval_at: [10], learning_rate: 0.1, num_leaves: 7,
+             min_data_in_leaf: 5, verbose: -1}
+  neural: {hidden: [16], epochs: 2, batch_users: 32, patience: 2, device: cpu}
+
+serve:
+  k: 10
+  n_queries: 100
+  n_latency_queries: 50
+  hnsw_m: 8
+  ef_search: [16, 64]
+  ivf_nlist: 4
+  nprobe: [1, 4]

@@ -1,0 +1,97 @@
+{
+  "temporal": {
+    "meta": {
+      "name": "temporal",
+      "reference_ts": 1573776000,
+      "train_pairs": 2246001,
+      "test_pairs_before_reclick_removal": 110745,
+      "test_pairs": 110549,
+      "reclicks_removed": 196,
+      "test_users": 49949,
+      "eval_users": 20000,
+      "catalog_size": 5369,
+      "history_policy": "snapshot",
+      "catalog_days": 1,
+      "mean_items_per_day": 5369.0,
+      "n_negatives": 100,
+      "negatives_min": 100,
+      "negatives_mean": 100.0,
+      "pairs_short_of_negatives": 0,
+      "history_items_first_shown_after_cutoff": 46
+    },
+    "audit": {
+      "checks": [
+        "no_train_test_overlap",
+        "positives_live_on_click_day",
+        "temporal_order"
+      ],
+      "cold_user_rate": 0.02462511761997237,
+      "cold_item_rate": 0.6147578089633319,
+      "cold_positive_rate": 0.4895204841292097,
+      "cold_catalog_rate": 0.6094244738312535
+    }
+  },
+  "temporal_val": {
+    "meta": {
+      "name": "temporal_val",
+      "reference_ts": 1573689600,
+      "train_pairs": 2199700,
+      "test_pairs_before_reclick_removal": 46579,
+      "test_pairs": 46301,
+      "reclicks_removed": 278,
+      "test_users": 20110,
+      "eval_users": 20110,
+      "catalog_size": 6144,
+      "history_policy": "snapshot",
+      "catalog_days": 1,
+      "mean_items_per_day": 6144.0,
+      "n_negatives": 100,
+      "negatives_min": 100,
+      "negatives_mean": 100.0,
+      "pairs_short_of_negatives": 0,
+      "history_items_first_shown_after_cutoff": 59
+    },
+    "audit": {
+      "checks": [
+        "no_train_test_overlap",
+        "positives_live_on_click_day",
+        "temporal_order"
+      ],
+      "cold_user_rate": 0.0046742913973147684,
+      "cold_item_rate": 0.6149068322981367,
+      "cold_positive_rate": 0.641022872076197,
+      "cold_catalog_rate": 0.6617838541666666
+    }
+  },
+  "random": {
+    "meta": {
+      "name": "random",
+      "reference_ts": null,
+      "train_pairs": 2246440,
+      "test_pairs_before_reclick_removal": 111505,
+      "test_pairs": 110110,
+      "reclicks_removed": 1395,
+      "test_users": 55167,
+      "eval_users": 20000,
+      "catalog_size": 22771,
+      "history_policy": "snapshot",
+      "catalog_days": 7,
+      "mean_items_per_day": 5468.714285714285,
+      "n_negatives": 100,
+      "negatives_min": 100,
+      "negatives_mean": 100.0,
+      "pairs_short_of_negatives": 0,
+      "test_fraction": 0.3203173754123206
+    },
+    "audit": {
+      "checks": [
+        "no_train_test_overlap",
+        "positives_live_on_click_day"
+      ],
+      "cold_user_rate": 0.004785469574201969,
+      "cold_item_rate": 0.1811630635160047,
+      "cold_positive_rate": 0.011197893016074835,
+      "cold_catalog_rate": 0.5900048307057222
+    }
+  }
+}
