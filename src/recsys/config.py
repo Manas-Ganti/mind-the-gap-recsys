@@ -106,6 +106,11 @@ class TwoTowerCfg(BaseModel):
     max_steps_per_epoch: int = 3000
     logq_correction: bool = True
     device: str = "auto"
+    # Two-tower training amplifies float-level differences into ~20-70% metric swings (measured:
+    # same seed, laptop vs ARC). Every stochastic model is therefore trained once per seed and
+    # reported as mean +/- sd; the rankers follow the same seeds. Baselines are exact: one run.
+    seeds: list[int] = [42]
+    threads: int = 16          # torch intra-op threads; 96 threads made small matmuls SLOWER on ARC
 
 
 class RetrievalCfg(BaseModel):
@@ -132,6 +137,7 @@ class NeuralRankerCfg(BaseModel):
     batch_users: int = 128
     patience: int = 3
     device: str = "auto"
+    threads: int = 16
 
 
 class RankingCfg(BaseModel):
@@ -202,7 +208,7 @@ def load_config(path: str | Path) -> Config:
 
 
 @contextmanager
-def deterministic_torch():
+def deterministic_torch(threads: int | None = None):
     """Bit-reproducible torch training. Without this, multi-threaded CPU backward passes that
     accumulate into shared rows (embedding gathers, index_add) sum in a nondeterministic order:
     two identical MIND-small two-tower fits differed by 0.43 in score and ~25% in val NDCG.
@@ -210,11 +216,15 @@ def deterministic_torch():
     import torch
 
     prev = torch.are_deterministic_algorithms_enabled()
+    prev_threads = torch.get_num_threads()
     torch.use_deterministic_algorithms(True)
+    if threads:
+        torch.set_num_threads(min(threads, prev_threads))
     try:
         yield
     finally:
         torch.use_deterministic_algorithms(prev)
+        torch.set_num_threads(prev_threads)
 
 
 def device_for(name: str) -> str:

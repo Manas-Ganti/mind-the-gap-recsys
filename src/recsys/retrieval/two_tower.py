@@ -69,14 +69,14 @@ class TwoTowerRetriever(Retriever):
 
     def __init__(self, temperature: float = 0.05, *, embeddings_path: str | Path, dim=64,
                  history_len=30, lr=1e-3, weight_decay=1e-5, batch_size=1024, epochs=3,
-                 max_steps_per_epoch=3000, logq_correction=True, device="auto", seed=42):
+                 max_steps_per_epoch=3000, logq_correction=True, device="auto", seed=42, threads=16):
         super().__init__(temperature=temperature, dim=dim, epochs=epochs, batch_size=batch_size, lr=lr)
         self.temperature = temperature
         self.embeddings_path = str(embeddings_path)
         self.dim, self.history_len = dim, history_len
         self.lr, self.weight_decay, self.batch_size = lr, weight_decay, batch_size
         self.epochs, self.max_steps_per_epoch = epochs, max_steps_per_epoch
-        self.logq_correction, self.device_name, self.seed = logq_correction, device, seed
+        self.logq_correction, self.device_name, self.seed, self.threads = logq_correction, device, seed, threads
 
     # ------------------------------------------------------------------ features
     @property
@@ -112,7 +112,7 @@ class TwoTowerRetriever(Retriever):
 
     # ------------------------------------------------------------------ training
     def fit(self, data) -> "TwoTowerRetriever":
-        with deterministic_torch():
+        with deterministic_torch(self.threads):
             return self._fit(data)
 
     def _fit(self, data) -> "TwoTowerRetriever":

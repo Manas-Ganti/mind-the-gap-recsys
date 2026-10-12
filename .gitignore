@@ -16,3 +16,4 @@ logs/
 # so they stay local. docs/arc.md is this project's tracked, de-identified version.
 arc_runbook.md
 arc_quickref.md
+results_arc/

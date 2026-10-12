@@ -45,15 +45,16 @@ class NeuralRanker:
     name = "neural"
 
     def __init__(self, hidden: list[int], dropout: float, lr: float, epochs: int, batch_users: int,
-                 patience: int, device: str, seed: int):
+                 patience: int, device: str, seed: int, threads: int = 16):
         self.hidden, self.dropout, self.lr, self.epochs = hidden, dropout, lr, epochs
         self.batch_users, self.patience, self.device_name, self.seed = batch_users, patience, device, seed
+        self.threads = threads
 
     def _std(self, X: np.ndarray) -> np.ndarray:
         return ((X - self.mu_) / self.sd_).astype(np.float32)
 
     def fit(self, train: CandidateBlock, valid: CandidateBlock, feature_names: list[str]) -> "NeuralRanker":
-        with deterministic_torch():
+        with deterministic_torch(self.threads):
             return self._fit(train, valid, feature_names)
 
     def _fit(self, train: CandidateBlock, valid: CandidateBlock, feature_names: list[str]) -> "NeuralRanker":

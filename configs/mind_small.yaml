@@ -69,6 +69,8 @@ retrieval:
     max_steps_per_epoch: 3000
     logq_correction: true
     device: cpu              # cpu: bit-reproducible with deterministic kernels (MPS is not); ARC is CPU-only
+    seeds: [42, 43, 44]             # stochastic models run once per seed; reported as mean ± sd
+    threads: 16              # torch threads; more made ARC slower (small matmuls)
 
 ranking:
   max_train_users: 50000
@@ -95,6 +97,7 @@ ranking:
     batch_users: 128
     patience: 3
     device: cpu
+    threads: 16
 
 serve:
   k: 100

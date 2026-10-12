@@ -126,17 +126,43 @@ def _f(x, d=4) -> str:
     return "n/a" if x is None or (isinstance(x, float) and not np.isfinite(x)) else f"{x:.{d}f}"
 
 
+def _pm(split: dict, method: str, key: str, value: float, d: int = 4) -> str:
+    """value, plus '± sd' across seeds when the method is stochastic."""
+    sd = split.get("seed_variation", {}).get("sd", {}).get(method, {}).get(key)
+    return _f(value, d) + (f" ± {_f(sd, d)}" if sd is not None and len(split["seed_variation"]["seeds"]) > 1 else "")
+
+
+def seed_section(split: dict, name: str, k: int) -> list[str]:
+    sv = split.get("seed_variation")
+    if not sv or len(sv["seeds"]) < 2:
+        return []
+    lines = [f"### {name}: variation across seeds {sv['seeds']}", "",
+             "Two-tower and the rankers are trained once per seed. Tables above show mean ± sd; "
+             "the baselines are deterministic, so they have no seed spread.", "",
+             f"| model | " + " | ".join(f"seed {x}: full NDCG@{k} / sampled HR@{k}" for x in sv["seeds"]) + " |",
+             "|---" * (1 + len(sv["seeds"])) + "|"]
+    for m, rows in sv["per_seed"].items():
+        lines.append(f"| {m} | " + " | ".join(f"{_f(r[f'full_user_ndcg@{k}'])} / {_f(r[f'sampled_hit@{k}'])}" for r in rows) + " |")
+    lines += ["", "Method ordering per seed (retrieval, per-positive HR@%d, full vs sampled):" % k, ""]
+    for x, o in zip(sv["seeds"], sv["orderings_per_seed"]):
+        lines.append(f"- seed {x}: full {o['retrieval_full_hit_pp']} vs sampled {o['retrieval_sampled_hit_pp']}, "
+                     f"τ = {o['kendall_tau']:.2f}" + (f"; system τ = {o['system']['kendall_tau']:.2f}" if "system" in o else ""))
+    return lines + [""]
+
+
 def paired_table(split: dict, k: int) -> str:
     rows = ["| method | full Recall@{k} | full NDCG@{k} | full HR@{k} (per positive) | sampled HR@{k} | "
             "full NDCG@{k} (pp) | sampled NDCG@{k} |".format(k=k), "|---" * 7 + "|"]
     for m in METHOD_ORDER:
         s = split["retrieval"][m]
-        rows.append(f"| {m} | {_f(s['full']['user'][f'recall@{k}'])} | {_f(s['full']['user'][f'ndcg@{k}'])} | "
-                    f"{_f(s['full']['per_positive'][f'hit@{k}'])} | {_f(s['sampled']['per_positive'][f'hit@{k}'])} | "
+        rows.append(f"| {m} | {_pm(split, m, f'full_user_recall@{k}', s['full']['user'][f'recall@{k}'])} | "
+                    f"{_pm(split, m, f'full_user_ndcg@{k}', s['full']['user'][f'ndcg@{k}'])} | "
+                    f"{_f(s['full']['per_positive'][f'hit@{k}'])} | {_pm(split, m, f'sampled_hit@{k}', s['sampled']['per_positive'][f'hit@{k}'])} | "
                     f"{_f(s['full']['per_positive'][f'ndcg@{k}'])} | {_f(s['sampled']['per_positive'][f'ndcg@{k}'])} |")
     for rk, e in split.get("end_to_end", {}).items():
-        rows.append(f"| {rk} (end-to-end) | {_f(e['end_to_end'][f'recall@{k}'])} | {_f(e['end_to_end'][f'ndcg@{k}'])} | "
-                    f"- | {_f(e['sampled']['per_positive'][f'hit@{k}'])} | - | "
+        rows.append(f"| {rk} (end-to-end) | {_pm(split, rk, f'full_user_recall@{k}', e['end_to_end'][f'recall@{k}'])} | "
+                    f"{_pm(split, rk, f'full_user_ndcg@{k}', e['end_to_end'][f'ndcg@{k}'])} | "
+                    f"- | {_pm(split, rk, f'sampled_hit@{k}', e['sampled']['per_positive'][f'hit@{k}'])} | - | "
                     f"{_f(e['sampled']['per_positive'][f'ndcg@{k}'])} |")
     return "\n".join(rows)
 
@@ -147,12 +173,12 @@ def ceiling_table(split: dict, k: int) -> str:
     for m in METHOD_ORDER:
         c = split["ceiling"][m]
         d = c["decomposition"][f"recall@{k}"]
-        rows.append(f"| {m} (own order) | {c['candidate_set_size']} | {_f(c['ceiling']['retrieval_recall'])} | "
+        rows.append(f"| {m} (own order) | {round(c['candidate_set_size'])} | {_f(c['ceiling']['retrieval_recall'])} | "
                     f"{_f(d['ceiling'])} | {_f(d['end_to_end'])} | {_f(d['fraction_of_ceiling'], 3)} | "
                     f"{_f(d['retrieval_loss'])} | {_f(d['ranking_loss'])} |")
     for rk, e in split.get("end_to_end", {}).items():
         d = e["decomposition"][f"recall@{k}"]
-        rows.append(f"| union -> {rk} | {e['candidate_set_size']} | {_f(e['ceiling']['retrieval_recall'])} | "
+        rows.append(f"| union -> {rk} | {round(e['candidate_set_size'])} | {_f(e['ceiling']['retrieval_recall'])} | "
                     f"{_f(d['ceiling'])} | {_f(d['end_to_end'])} | {_f(d['fraction_of_ceiling'], 3)} | "
                     f"{_f(d['retrieval_loss'])} | {_f(d['ranking_loss'])} |")
     return "\n".join(rows)
@@ -407,6 +433,7 @@ def report(cfg: Config) -> dict:
             o = split["orderings"]["system"]
             md += [f"Orderings (system): full NDCG@{k} {o['full_user_ndcg']} vs sampled HR@{k} {o['sampled_hit']}, "
                    f"Kendall τ = {o['kendall_tau']:.2f}", ""]
+        md += seed_section(split, name, k)
         md += [f"### {name}: retrieval ceiling", "", ceiling_table(split, k), "",
                f"### {name}: popularity decomposition", "", popularity_table(split, k), ""]
     if "temporal" in sp and "random" in sp:

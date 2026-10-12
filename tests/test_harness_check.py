@@ -67,3 +67,16 @@ def test_grid_edge_detection():
     assert grid_edges("popular", {"window_hours": 3}, w) == ["window_hours=3 (lowest tried)"]
     assert grid_edges("popular", {"window_hours": None}, w) == []        # all-time is the natural top
     assert grid_edges("popular", {"window_hours": 6}, w) == []
+
+
+def test_seed_aggregation_means_numbers_keeps_first_for_the_rest():
+    import numpy as np
+    from recsys.pipeline import _deep_stat
+
+    a = {"m": {"x": 1.0, "ci": [0.0, 2.0], "params": {"t": 0.1}, "order": ["a", "b"], "n": 10}}
+    b = {"m": {"x": 3.0, "ci": [2.0, 4.0], "params": {"t": 0.1}, "order": ["b", "a"], "n": 10}}
+    mean = _deep_stat([a, b], np.mean)
+    assert mean["m"]["x"] == 2.0 and mean["m"]["ci"] == [1.0, 3.0] and mean["m"]["n"] == 10.0
+    assert mean["m"]["params"] == {"t": 0.1} and mean["m"]["order"] == ["a", "b"]
+    sd = _deep_stat([a, b], lambda v: v.std(ddof=1))
+    assert abs(sd["m"]["x"] - np.std([1.0, 3.0], ddof=1)) < 1e-12

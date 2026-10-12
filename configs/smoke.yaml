@@ -55,6 +55,7 @@ retrieval:
     epochs: 1
     max_steps_per_epoch: 20
     device: cpu
+    seeds: [1, 2]
 
 ranking:
   max_train_users: 200
