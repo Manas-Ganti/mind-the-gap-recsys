@@ -12,8 +12,23 @@ Only the **labelled** splits. MIND's `test` split has no click labels, so it is 
 | large | `MINDlarge_train.zip`, `MINDlarge_dev.zip` | ~0.5 GB + ~0.1 GB | the real run |
 | small | `MINDsmall_train.zip`, `MINDsmall_dev.zip` | ~50 MB total | laptop iteration only |
 
-Downloads are linked from <https://msnews.github.io/> (the "Download" section) and the
-Azure Open Datasets page for MIND. Mirror URLs change, so take the current links from there.
+Downloads are linked from <https://msnews.github.io/> (the "Download" section). As of
+2026-10-13 its buttons point at the gated Hugging Face dataset `yjw1029/MIND`; the old
+`mind201910small.blob.core.windows.net` mirror returns `409 Public access is not permitted`.
+Accept the dataset's terms on Hugging Face, then download with a read token:
+
+```bash
+cd data/raw
+read -s HF_TOKEN   # paste a Hugging Face read token; not echoed, not saved
+for f in MINDlarge_train MINDlarge_dev; do
+  curl -fL -H "Authorization: Bearer $HF_TOKEN" -o $f.zip \
+    https://huggingface.co/datasets/yjw1029/MIND/resolve/main/$f.zip
+done
+```
+
+After unzipping (below), pin the bytes: `sha256sum data/raw/MINDlarge_{train,dev}/{behaviors,news}.tsv
+> data/MANIFEST-mindlarge.sha256` from the repo root, and commit the manifest. `arc/pipeline.slurm`
+refuses to ingest data that does not match it.
 
 ## Layout expected by `configs/config.yaml`
 
