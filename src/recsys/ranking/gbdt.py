@@ -1,5 +1,6 @@
-"""LightGBM lambdarank over stage-1 candidates. Trained on temporal_val candidates, early
-stopped on a held-out set of temporal_val users, never on temporal test.
+"""LightGBM lambdarank over stage-1 candidates. Trained on temporal_rtrain candidates, early
+stopped on the later temporal_val day, then refit on temporal_val for the chosen number of
+rounds (no validation block => exactly `num_boost_round`). Never sees temporal test.
 
 LightGBM runs in a separate worker process (`python -m recsys.ranking.gbdt fit|predict`).
 On macOS arm64, torch and LightGBM each ship their own libomp; with both loaded into one
@@ -33,16 +34,22 @@ def _run(*args: str) -> None:
 
 class GBDTRanker:
     name = "gbdt"
+    columns: list[int] | None = None      # feature subset; class default keeps old pickles loadable
 
-    def __init__(self, params: dict, num_boost_round: int, early_stopping_rounds: int, seed: int):
+    def __init__(self, params: dict, num_boost_round: int, early_stopping_rounds: int, seed: int,
+                 columns: list[int] | None = None):
         self.params = {**params, "seed": seed, "deterministic": True, "force_row_wise": True}
         self.num_boost_round, self.early_stopping_rounds = num_boost_round, early_stopping_rounds
+        self.columns = columns
 
-    def fit(self, train: CandidateBlock, valid: CandidateBlock, feature_names: list[str]) -> "GBDTRanker":
+    def fit(self, train: CandidateBlock, valid: CandidateBlock | None, feature_names: list[str]) -> "GBDTRanker":
+        if self.columns is not None:
+            feature_names = [feature_names[i] for i in self.columns]
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp)
-            _save_block(train, t / "train.npz")
-            _save_block(valid, t / "valid.npz")
+            _save_block(train.with_columns(self.columns), t / "train.npz")
+            if valid is not None:
+                _save_block(valid.with_columns(self.columns), t / "valid.npz")
             (t / "spec.json").write_text(json.dumps({
                 "params": self.params, "num_boost_round": self.num_boost_round,
                 "early_stopping_rounds": self.early_stopping_rounds, "feature_names": feature_names}))
@@ -56,7 +63,7 @@ class GBDTRanker:
     def predict(self, block: CandidateBlock) -> np.ndarray:
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp)
-            _save_block(block, t / "block.npz")
+            _save_block(block.with_columns(self.columns), t / "block.npz")
             (t / "model.txt").write_text(self.model_str_)
             (t / "spec.json").write_text(json.dumps({"best_iteration": self.best_iteration_}))
             _run("predict", str(t))
@@ -76,18 +83,24 @@ def _worker(cmd: str, tmp: Path) -> None:
 
     spec = json.loads((tmp / "spec.json").read_text())
     if cmd == "fit":
-        tr, va = np.load(tmp / "train.npz"), np.load(tmp / "valid.npz")
+        tr = np.load(tmp / "train.npz")
         names = spec["feature_names"]
         dtr = lgb.Dataset(tr["X"], tr["y"], group=np.diff(tr["ptr"]), feature_name=names)
-        dva = lgb.Dataset(va["X"], va["y"], group=np.diff(va["ptr"]), reference=dtr)
-        booster = lgb.train(spec["params"], dtr, num_boost_round=spec["num_boost_round"], valid_sets=[dva],
-                            valid_names=["valid"],
-                            callbacks=[lgb.early_stopping(spec["early_stopping_rounds"], verbose=False),
-                                       lgb.log_evaluation(0)])
+        if (tmp / "valid.npz").exists():
+            va = np.load(tmp / "valid.npz")
+            dva = lgb.Dataset(va["X"], va["y"], group=np.diff(va["ptr"]), reference=dtr)
+            booster = lgb.train(spec["params"], dtr, num_boost_round=spec["num_boost_round"], valid_sets=[dva],
+                                valid_names=["valid"],
+                                callbacks=[lgb.early_stopping(spec["early_stopping_rounds"], verbose=False),
+                                           lgb.log_evaluation(0)])
+            best_iteration = int(booster.best_iteration)
+        else:
+            booster = lgb.train(spec["params"], dtr, num_boost_round=spec["num_boost_round"])
+            best_iteration = spec["num_boost_round"]
         booster.save_model(str(tmp / "model.txt"))
         imp = booster.feature_importance("gain")
         (tmp / "info.json").write_text(json.dumps({
-            "best_iteration": int(booster.best_iteration),
+            "best_iteration": best_iteration,
             "feature_importance_gain": dict(sorted(zip(names, map(float, imp)), key=lambda x: -x[1]))}))
     elif cmd == "predict":
         booster = lgb.Booster(model_file=str(tmp / "model.txt"))

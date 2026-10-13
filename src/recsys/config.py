@@ -35,6 +35,10 @@ class SparkCfg(BaseModel):
 class SplitCfg(BaseModel):
     temporal_cutoff: datetime
     validation_cutoff: datetime
+    # Rankers train on [ranker_train_cutoff, validation_cutoff) and are selected on the later
+    # validation day: a same-day user holdout cannot see day-to-day shift (it overstated the
+    # GBDT 6.5x on MIND-small, 2026-10-13).
+    ranker_train_cutoff: datetime
     random_test_fraction: float | None = None
     exclude_train_seen: bool = True
     catalog: Literal["live", "all"] = "live"
@@ -50,6 +54,8 @@ class SplitCfg(BaseModel):
     def _ordered(self) -> "SplitCfg":
         if self.validation_cutoff >= self.temporal_cutoff:
             raise ValueError("validation_cutoff must be strictly before temporal_cutoff")
+        if self.ranker_train_cutoff >= self.validation_cutoff:
+            raise ValueError("ranker_train_cutoff must be strictly before validation_cutoff")
         return self
 
     @staticmethod
@@ -140,9 +146,23 @@ class NeuralRankerCfg(BaseModel):
     threads: int = 16
 
 
+class FeatureSetCfg(BaseModel):
+    """Name prefixes. `include` None = every feature; `exclude` is applied after it."""
+    include: list[str] | None = None
+    exclude: list[str] = []
+
+    def select(self, names: list[str]) -> list[int]:
+        keep = [i for i, n in enumerate(names)
+                if (self.include is None or any(n.startswith(p) for p in self.include))
+                and not any(n.startswith(p) for p in self.exclude)]
+        if not keep:
+            raise ValueError(f"feature set {self} selects no features from {names}")
+        return keep
+
+
 class RankingCfg(BaseModel):
     max_train_users: int = 50000
-    valid_fraction: float = 0.2
+    feature_sets: dict[str, FeatureSetCfg] = Field(default_factory=lambda: {"all": FeatureSetCfg()})
     gbdt: GBDTCfg
     neural: NeuralRankerCfg
 

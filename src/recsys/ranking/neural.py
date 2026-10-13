@@ -1,6 +1,7 @@
 """A simple deep ranker for comparison: MLP over the same standardised candidate features,
 trained with a listwise softmax loss per user (-mean log p(positive) over each user's
-candidate list), early stopped on held-out users' NDCG@10 of the reranked candidates."""
+candidate list), early stopped on a later day's NDCG@10 of the reranked candidates. With no
+validation block it trains for exactly `epochs` (the final refit, epochs fixed by selection)."""
 from __future__ import annotations
 
 import pickle
@@ -11,8 +12,7 @@ import torch
 import torch.nn as nn
 
 from recsys.config import deterministic_torch, device_for
-from recsys.eval.metrics import ndcg_at_k
-from recsys.ranking.features import CandidateBlock
+from recsys.ranking.features import CandidateBlock, group_ndcg
 
 
 class _MLP(nn.Module):
@@ -43,21 +43,23 @@ def _padded(block: CandidateBlock, groups: np.ndarray, X: np.ndarray):
 
 class NeuralRanker:
     name = "neural"
+    columns: list[int] | None = None      # feature subset; class default keeps old pickles loadable
 
     def __init__(self, hidden: list[int], dropout: float, lr: float, epochs: int, batch_users: int,
-                 patience: int, device: str, seed: int, threads: int = 16):
+                 patience: int, device: str, seed: int, threads: int = 16, columns: list[int] | None = None):
         self.hidden, self.dropout, self.lr, self.epochs = hidden, dropout, lr, epochs
         self.batch_users, self.patience, self.device_name, self.seed = batch_users, patience, device, seed
-        self.threads = threads
+        self.threads, self.columns = threads, columns
 
     def _std(self, X: np.ndarray) -> np.ndarray:
         return ((X - self.mu_) / self.sd_).astype(np.float32)
 
-    def fit(self, train: CandidateBlock, valid: CandidateBlock, feature_names: list[str]) -> "NeuralRanker":
+    def fit(self, train: CandidateBlock, valid: CandidateBlock | None, feature_names: list[str]) -> "NeuralRanker":
         with deterministic_torch(self.threads):
-            return self._fit(train, valid, feature_names)
+            return self._fit(train.with_columns(self.columns),
+                             None if valid is None else valid.with_columns(self.columns), feature_names)
 
-    def _fit(self, train: CandidateBlock, valid: CandidateBlock, feature_names: list[str]) -> "NeuralRanker":
+    def _fit(self, train: CandidateBlock, valid: CandidateBlock | None, feature_names: list[str]) -> "NeuralRanker":
         torch.manual_seed(self.seed)
         rng = np.random.default_rng(self.seed)
         dev = torch.device(device_for(self.device_name))
@@ -82,7 +84,9 @@ class NeuralRanker:
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
-            score = self._valid_ndcg(valid)
+            if valid is None:
+                continue
+            score = group_ndcg(valid, self._predict(valid))
             self.valid_curve_.append(score)
             if score > best:
                 best, bad = score, 0
@@ -91,25 +95,18 @@ class NeuralRanker:
                 bad += 1
                 if bad >= self.patience:
                     break
-        self.net_.load_state_dict(best_state)
+        if best_state is not None:
+            self.net_.load_state_dict(best_state)
         self.net_.cpu().eval()
-        self.best_valid_ndcg_ = best
+        self.best_valid_ndcg_ = best if valid is not None else float("nan")
+        self.best_epochs_ = (int(np.argmax(self.valid_curve_)) + 1) if self.valid_curve_ else self.epochs
         return self
 
-    def _valid_ndcg(self, valid: CandidateBlock, k: int = 10) -> float:
-        s = self.predict(valid)
-        vals = []
-        for g in range(len(valid.users)):
-            a, b = valid.ptr[g], valid.ptr[g + 1]
-            y = valid.y[a:b]
-            if not y.any():
-                continue
-            ranked = np.argsort(-s[a:b], kind="stable")
-            vals.append(ndcg_at_k(list(ranked), set(np.flatnonzero(y)), k))
-        return float(np.mean(vals)) if vals else 0.0
+    def predict(self, block: CandidateBlock) -> np.ndarray:
+        return self._predict(block.with_columns(self.columns))
 
     @torch.no_grad()
-    def predict(self, block: CandidateBlock, chunk: int = 200_000) -> np.ndarray:
+    def _predict(self, block: CandidateBlock, chunk: int = 200_000) -> np.ndarray:
         self.net_.eval()
         dev = next(self.net_.parameters()).device
         X = self._std(block.X)

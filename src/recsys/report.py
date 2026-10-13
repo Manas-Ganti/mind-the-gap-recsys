@@ -388,6 +388,23 @@ def fig_ann(ann: dict, path: Path) -> None:
 
 # --------------------------------------------------------------------------- entry point
 
+def ranker_selection_section(r: dict | None) -> list[str]:
+    """Which declared feature set each ranker shipped with, and the held-out-day scores that chose it."""
+    if not r or "chosen" not in r:
+        return []
+    sets = list(next(iter(r["chosen"].values()))["means"])
+    md = [f"## Ranker selection (train {r['train_day']}, select on {r['select_day']})", "",
+          f"Each ranker is trained on {r['train_day']} candidates and scored on {r['select_day']} "
+          f"({r['select_metric']}, mean ± sd over seeds {r['seeds']}). The chosen set is refit on "
+          f"{r['select_day']}; temporal test is never used for this choice.", "",
+          "| ranker | " + " | ".join(sets) + " | chosen |", "|---" * (len(sets) + 2) + "|"]
+    for kind, c in r["chosen"].items():
+        cells = [f"{c['means'][fs]:.4f} ± {c['sd'][fs]:.4f}" for fs in sets]
+        md.append(f"| {kind} | " + " | ".join(cells) + f" | {c['feature_set']} |")
+    md += ["", "Feature sets: " + "; ".join(f"**{fs}** = {len(f)} features" for fs, f in r["feature_sets"].items()), ""]
+    return md
+
+
 def report(cfg: Config) -> dict:
     res, figs = Path(cfg.paths.results_dir), Path(cfg.paths.figures_dir)
     figs.mkdir(parents=True, exist_ok=True)
@@ -448,6 +465,7 @@ def report(cfg: Config) -> dict:
             f"- **{m}**: {t['grid_size']} grid points, best {t['best']} -> {tuning['metric']} = {_f(t['best_value'])}"
             + (f" — **WARNING: best on a grid edge: {', '.join(t['at_grid_edge'])}**" if t.get("at_grid_edge") else "")
             for m, t in tuning["methods"].items()] + [""]
+        md += ranker_selection_section(tuning.get("rankers"))
     if ann:
         md += ["## ANN serving", "", "| index | setting | recall | p50 ms | p95 ms | p99 ms |", "|---" * 6 + "|",
                f"| exact | - | 1.000 | {_f(ann['exact']['p50_ms'], 3)} | {_f(ann['exact']['p95_ms'], 3)} | "

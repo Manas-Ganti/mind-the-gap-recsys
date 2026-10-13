@@ -22,7 +22,8 @@ spark:
 split:
   # MIND train covers 2019-11-09..14, dev covers 2019-11-15 (timestamps treated as UTC).
   temporal_cutoff: "2019-11-15 00:00:00"     # test = everything at or after this
-  validation_cutoff: "2019-11-14 00:00:00"   # inner split of temporal train: tuning + ranker training
+  validation_cutoff: "2019-11-14 00:00:00"   # inner split of temporal train: retriever tuning + ranker selection
+  ranker_train_cutoff: "2019-11-13 00:00:00" # rankers train on 11-13, are selected on 11-14
   random_test_fraction: null                 # null => match the temporal split's test fraction
   exclude_train_seen: true                   # never rank items the user already clicked in train
   history_policy: snapshot                   # see config.py; asserted in the split audit
@@ -74,7 +75,14 @@ retrieval:
 
 ranking:
   max_train_users: 50000
-  valid_fraction: 0.2
+  # Declared 2026-10-13, before the rerun. The ranker trains on the ranker_train_cutoff day and
+  # one set is chosen per ranker by NDCG@10 within candidates on the later validation day.
+  # time_invariant drops features defined relative to "now" (age, recency windows, in-window
+  # user activity); CTR and lifetime counts stay.
+  feature_sets:
+    all: {}
+    time_invariant: {exclude: [item_age_h, item_recent_, user_log_window_clicks]}
+    retrieval_only: {include: [score_, in_top_]}
   gbdt:
     num_boost_round: 1000
     early_stopping_rounds: 50

@@ -54,7 +54,7 @@ def test_spark_split_end_to_end(tmp_path: Path):
     stats = ingest(cfg, spark)
     assert stats["impressions"] == 80 * 7 and stats["clicks"] > 0
     audits = build_splits(cfg, spark)       # raises LeakageError on any violation
-    assert set(audits) == {"temporal", "temporal_val", "random"}
+    assert set(audits) == {"temporal", "temporal_val", "temporal_rtrain", "random"}
 
     cut = cfg.split.epoch(cfg.split.temporal_cutoff)
     d = load_split(cfg, "temporal")

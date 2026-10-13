@@ -17,6 +17,8 @@ from dataclasses import dataclass
 import numpy as np
 import scipy.sparse as sp
 
+from recsys.eval.metrics import ndcg_at_k
+
 RECENT_HOURS = (1, 6, 24)
 
 
@@ -38,6 +40,15 @@ class CandidateBlock:
             items=np.concatenate([b.items for b in blocks]),
             X=np.concatenate([b.X for b in blocks]),
             y=np.concatenate([b.y for b in blocks]))
+
+    def with_columns(self, columns: list[int] | None) -> "CandidateBlock":
+        """Same rows, only the given feature columns (None = all)."""
+        if columns is None:
+            return self
+        return CandidateBlock(self.users, self.ptr, self.items, np.ascontiguousarray(self.X[:, columns]), self.y)
+
+    def has_positive(self) -> np.ndarray:
+        return np.add.reduceat(self.y, self.ptr[:-1]) > 0 if len(self.y) else np.zeros(len(self.users), bool)
 
     def subset_groups(self, mask: np.ndarray) -> "CandidateBlock":
         idx = np.flatnonzero(mask)
@@ -159,3 +170,18 @@ def rerank(block: CandidateBlock, scores: np.ndarray, max_len: int | None = None
         order = np.argsort(-scores[s:e], kind="stable")[:L]
         out[g, :len(order)] = block.items[s:e][order]
     return out
+
+
+def group_ndcg(block: CandidateBlock, scores: np.ndarray, k: int = 10) -> float:
+    """Mean NDCG@k of each group's candidates ordered by `scores`, over groups with a positive
+    among their candidates. Measures ranking only: positives retrieval missed are not counted,
+    so it is comparable across rankers on one block, not to the full-catalog numbers."""
+    vals = []
+    for g in range(len(block.users)):
+        a, b = block.ptr[g], block.ptr[g + 1]
+        y = block.y[a:b]
+        if not y.any():
+            continue
+        order = np.argsort(-scores[a:b], kind="stable")
+        vals.append(ndcg_at_k(list(order), set(np.flatnonzero(y)), k))
+    return float(np.mean(vals)) if vals else 0.0

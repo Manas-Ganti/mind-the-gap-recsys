@@ -3,7 +3,7 @@
 Order is enforced by construction:
   * every baseline (popular, itemknn, graph) finishes its grid before two-tower training
     starts (Gate C; timestamps recorded in results/tuning.json)
-  * tuning and ranker training only ever touch temporal_val
+  * tuning, ranker training and ranker selection only touch temporal_rtrain / temporal_val
   * ceilings are computed and timestamped before any end-to-end number (Gate D)
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ from recsys.eval.ceiling import ceiling_per_user, ceiling_report
 from recsys.eval.metrics import bootstrap_ci, kendall_tau, mean_metrics, single_positive_metrics, user_metrics_from_positions
 from recsys.eval.popularity import BUCKETS, assign_buckets, bucket_thresholds, concentration, decompose
 from recsys.eval.protocol import MethodRun, method_order, run_protocol
-from recsys.ranking.features import CandidateBlock, FeatureBuilder, rerank
+from recsys.ranking.features import CandidateBlock, FeatureBuilder, group_ndcg, rerank
 from recsys.retrieval import METHOD_ORDER, get_retriever_class
 from recsys.retrieval.base import Retriever
 
@@ -217,55 +217,129 @@ def _with_seed(retr: dict, two_tower) -> dict:
     return {**{m: retr[m] for m in BASELINES}, "two_tower": two_tower}
 
 
-def train(cfg: Config) -> dict:
+def _make_ranker(cfg: Config, kind: str, seed: int, columns: list[int], rounds: int | None = None):
+    """rounds=None: early-stopped fit against a validation block. rounds=n: exactly n boosting
+    rounds / epochs, no validation (the final refit)."""
     from recsys.ranking.gbdt import GBDTRanker
     from recsys.ranking.neural import NeuralRanker
 
+    rk = cfg.ranking
+    if kind == "gbdt":
+        g = rk.gbdt
+        return GBDTRanker(g.params, rounds or g.num_boost_round, g.early_stopping_rounds, seed, columns)
+    n = rk.neural
+    return NeuralRanker(n.hidden, n.dropout, n.lr, rounds or n.epochs, n.batch_users, n.patience, n.device,
+                        seed, n.threads, columns)
+
+
+def _fit_summary(kind: str, model) -> dict:
+    if kind == "gbdt":
+        return {"rounds": max(1, int(model.best_iteration_)), "feature_importance_gain": model.feature_importance_}
+    return {"rounds": int(model.best_epochs_), "valid_ndcg@10_curve": model.valid_curve_}
+
+
+def _save_candidates(block: CandidateBlock, path: Path) -> None:
+    np.savez(path, users=block.users, ptr=block.ptr, items=block.items, X=block.X, y=block.y)
+
+
+def _load_candidates(path: Path) -> CandidateBlock:
+    z = np.load(path)
+    return CandidateBlock(z["users"], z["ptr"], z["items"], z["X"], z["y"])
+
+
+def train(cfg: Config) -> dict:
     from recsys.retrieval.text_embed import ensure_item_embeddings
 
     cfg.ensure_dirs()
     ensure_item_embeddings(cfg)            # no-op when the `embed` stage already cached them
     val = load_split(cfg, "temporal_val")
     tuning, best_val = tune(cfg, val)
+    best_params = {m: tuning["methods"][m]["best"] for m in METHOD_ORDER}
+    seeds = seeds_of(cfg)
 
-    # Stage-2 training data: candidates from the tuned val retrievers on held-in val users, once
-    # per seed (each seed's two-tower produces different candidates and score features).
+    # Stage 2. Rankers train on the temporal_rtrain day (its retrievers fit only on what came
+    # before it, with the tuned params) and are early-stopped and selected on the LATER
+    # temporal_val day, whose candidates come from the tuned val retrievers. A same-day user
+    # holdout cannot see day-to-day shift; it overstated the GBDT 6.5x on MIND-small. One
+    # declared feature set per ranker is chosen by the mean over seeds, then refit on
+    # temporal_val for the selected rounds/epochs so the shipped ranker has the freshest day.
+    # Nothing in stage 2 touches temporal test.
     rk = cfg.ranking
-    sub = subset_eval_users(val, _sample_users(val.eval_users, rk.max_train_users, cfg.seed + 1))
-    tuning["rankers"] = {"seeds": seeds_of(cfg), "per_seed": {}}
-    nc = rk.neural
-    for sd in seeds_of(cfg):
-        print(f"  [rankers] seed {sd}: building candidate features", flush=True)
-        _, block, _, fb = _collect_blocks(sub, _with_seed(best_val, best_val["two_tower"][sd]), cfg,
+    rtrain = load_split(cfg, "temporal_rtrain")
+    r_base = {m: make_retriever(m, best_params[m], cfg).fit(rtrain) for m in BASELINES}
+    rsub = subset_eval_users(rtrain, _sample_users(rtrain.eval_users, rk.max_train_users, cfg.seed + 1))
+    vsub = subset_eval_users(val, _sample_users(val.eval_users, rk.max_train_users, cfg.seed + 1))
+    rinfo = {"seeds": seeds, "train_split": "temporal_rtrain", "select_split": "temporal_val",
+             "train_day": str(cfg.split.ranker_train_cutoff.date()), "select_day": str(cfg.split.validation_cutoff.date()),
+             "select_metric": "ndcg@10 within candidates", "feature_sets": {}, "per_seed": {}}
+    tuning["rankers"] = rinfo
+    cache = Path(cfg.paths.models_dir) / "rankers" / "_select"
+    cache.mkdir(parents=True, exist_ok=True)
+    names: list[str] = []
+    for sd in seeds:
+        print(f"  [rankers] seed {sd}: candidates for {rinfo['train_day']} (train) and {rinfo['select_day']} (select)",
+              flush=True)
+        r_tt = make_retriever("two_tower", best_params["two_tower"], cfg, seed=sd).fit(rtrain)
+        _, rblock, _, fb = _collect_blocks(rsub, _with_seed(r_base, r_tt), cfg, with_labels=True, sampled=False)
+        _, vblock, _, _ = _collect_blocks(vsub, _with_seed(best_val, best_val["two_tower"][sd]), cfg,
                                           with_labels=True, sampled=False)
-        has_pos = np.add.reduceat(block.y, block.ptr[:-1]) > 0 if len(block.y) else np.zeros(0, bool)
-        is_valid = np.random.default_rng(cfg.seed + 2).random(len(block.users)) < rk.valid_fraction
-        tr, va = block.subset_groups(~is_valid & has_pos), block.subset_groups(is_valid & has_pos)
-        info = {"n_groups": int(len(block.users)), "groups_with_positive_in_candidates": float(has_pos.mean()),
-                "n_train_groups": int(len(tr.users)), "n_valid_groups": int(len(va.users)),
-                "mean_candidates": float(np.diff(block.ptr).mean()), "features": fb.names}
-        gbdt = GBDTRanker(rk.gbdt.params, rk.gbdt.num_boost_round, rk.gbdt.early_stopping_rounds, sd).fit(tr, va, fb.names)
-        gbdt.save(model_path(cfg, "rankers", f"gbdt_seed{sd}"))
-        info["gbdt"] = {"best_iteration": gbdt.best_iteration_, "feature_importance_gain": gbdt.feature_importance_}
-        neural = NeuralRanker(nc.hidden, nc.dropout, nc.lr, nc.epochs, nc.batch_users, nc.patience, nc.device,
-                              sd, nc.threads).fit(tr, va, fb.names)
-        neural.save(model_path(cfg, "rankers", f"neural_seed{sd}"))
-        info["neural"] = {"valid_ndcg@10_curve": neural.valid_curve_, "best_valid_ndcg@10": neural.best_valid_ndcg_,
-                          "epochs_run": len(neural.valid_curve_)}
-        tuning["rankers"]["per_seed"][str(sd)] = info
+        names = fb.names
+        r_pos, v_pos = rblock.has_positive(), vblock.has_positive()
+        tr, va = rblock.subset_groups(r_pos), vblock.subset_groups(v_pos)
+        info = {"train_groups": int(len(tr.users)), "train_groups_with_positive_in_candidates": float(r_pos.mean()),
+                "select_groups": int(len(va.users)), "select_groups_with_positive_in_candidates": float(v_pos.mean()),
+                "mean_candidates": float(np.diff(vblock.ptr).mean()), "features": names,
+                "select": {k: {} for k in RANKERS}, "final": {}}
+        del rblock, vblock, r_tt
+        _save_candidates(va, cache / f"select_seed{sd}.npz")
+        for fs_name, fs in rk.feature_sets.items():
+            cols = fs.select(names)
+            rinfo["feature_sets"][fs_name] = [names[i] for i in cols]
+            for kind in RANKERS:
+                model = _make_ranker(cfg, kind, sd, cols).fit(tr, va, names)
+                v = group_ndcg(va, model.predict(va))
+                info["select"][kind][fs_name] = {"ndcg@10": v, **_fit_summary(kind, model)}
+                print(f"  [rankers] seed {sd} {kind} {fs_name}: ndcg@10 within candidates on "
+                      f"{rinfo['select_day']} = {v:.5f} ({info['select'][kind][fs_name]['rounds']} rounds)", flush=True)
+        rinfo["per_seed"][str(sd)] = info
         write_json(Path(cfg.paths.results_dir) / "tuning.json", tuning)
-        del block, tr, va
-    del val, best_val, sub
+        del tr, va
+    del rtrain, r_base, rsub
+
+    rinfo["chosen"] = {}
+    for kind in RANKERS:
+        per = {fs: [rinfo["per_seed"][str(sd)]["select"][kind][fs]["ndcg@10"] for sd in seeds] for fs in rk.feature_sets}
+        means = {fs: float(np.mean(v)) for fs, v in per.items()}
+        choice = max(means, key=means.get)            # ties: first declared
+        rinfo["chosen"][kind] = {"feature_set": choice, "mean_ndcg@10": means[choice], "means": means,
+                                 "sd": {fs: float(np.std(v, ddof=1)) if len(v) > 1 else 0.0 for fs, v in per.items()}}
+        print(f"  [rankers] {kind}: chose feature set '{choice}' "
+              + " ".join(f"{fs}={m:.5f}" for fs, m in means.items()), flush=True)
+
+    for sd in seeds:
+        va = _load_candidates(cache / f"select_seed{sd}.npz")
+        info = rinfo["per_seed"][str(sd)]
+        for kind in RANKERS:
+            fs = rinfo["chosen"][kind]["feature_set"]
+            rounds = info["select"][kind][fs]["rounds"]
+            model = _make_ranker(cfg, kind, sd, rk.feature_sets[fs].select(names), rounds=rounds).fit(va, None, names)
+            model.save(model_path(cfg, "rankers", f"{kind}_seed{sd}"))
+            info["final"][kind] = {"feature_set": fs, "fit_on": rinfo["select_split"], "rounds": rounds,
+                                   **({"feature_importance_gain": model.feature_importance_} if kind == "gbdt" else {})}
+            print(f"  [fit] rankers/{kind}_seed{sd}: '{fs}' refit on {rinfo['select_day']} for {rounds} rounds", flush=True)
+        (cache / f"select_seed{sd}.npz").unlink()
+        write_json(Path(cfg.paths.results_dir) / "tuning.json", tuning)
+    cache.rmdir()
+    del val, best_val, vsub
 
     # Final retrievers: best params, refit on each evaluation split's train set. Baselines once,
     # two-tower once per seed.
-    best_params = {m: tuning["methods"][m]["best"] for m in METHOD_ORDER}
     for split in EVAL_SPLITS:
         data = load_split(cfg, split)
         for m in BASELINES:
             print(f"  [fit] {split}/{m} {best_params[m]}", flush=True)
             make_retriever(m, best_params[m], cfg).fit(data).save(model_path(cfg, split, m))
-        for i, sd in enumerate(seeds_of(cfg)):
+        for i, sd in enumerate(seeds):
             print(f"  [fit] {split}/two_tower seed={sd} {best_params['two_tower']}", flush=True)
             r = make_retriever("two_tower", best_params["two_tower"], cfg, seed=sd).fit(data)
             r.save(model_path(cfg, split, tt_name(sd)))

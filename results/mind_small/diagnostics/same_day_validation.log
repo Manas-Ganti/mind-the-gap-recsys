@@ -1,0 +1,44 @@
+best params {'popular': {'window_hours': 1.0}, 'itemknn': {'neighbors': 500, 'shrink': 0.0, 'alpha': 0.85}, 'graph': {'neighbors': 300, 'alpha': 0.8, 'beta': 0.2}, 'two_tower': {'temperature': 0.01}}
+  two_tower fit 214s
+  two_tower fit 218s
+
+== 1. within-union NDCG@10 ==
+  popular score order                val-heldout  NDCG@10 within union = 0.0501  (groups=1792)
+  popular score order                test         NDCG@10 within union = 0.0740  (groups=11811)
+  gbdt best_iteration=72
+  gbdt (as shipped)                  val-heldout  NDCG@10 within union = 0.2448  (groups=1792)
+  gbdt (as shipped)                  test         NDCG@10 within union = 0.0377  (groups=11811)
+  neural (as shipped)                val-heldout  NDCG@10 within union = 0.1704  (groups=1792)
+  neural (as shipped)                test         NDCG@10 within union = 0.0782  (groups=11811)
+
+== 2. feature drift val(train groups) -> test ==
+  user_log_window_clicks   KS=0.695  median      1.386 ->          0   p99      3.555 ->      2.833
+  item_age_h               KS=0.221  median      31.38 ->      32.59   p99        120 ->        144
+  user_log_clicks          KS=0.128  median      3.178 ->      2.833   p99      5.361 ->      5.017
+  score_graph              KS=0.103  median          0 ->          0   p99   0.008909 ->   0.005542
+  score_itemknn            KS=0.101  median          0 ->          0   p99     0.2063 ->     0.1386
+  score_two_tower          KS=0.080  median      0.897 ->      0.892   p99     0.9429 ->     0.9421
+  user_cat_share           KS=0.076  median    0.06897 ->    0.05263   p99        0.8 ->        0.8
+  item_recent_6h           KS=0.068  median          0 ->          0   p99      4.382 ->      4.745
+  user_subcat_share        KS=0.067  median          0 ->          0   p99     0.3939 ->     0.3902
+  score_popular            KS=0.052  median          0 ->          0   p99          6 ->         11
+  item_recent_1h           KS=0.052  median          0 ->          0   p99      1.946 ->      2.485
+  item_recent_24h          KS=0.052  median      1.099 ->     0.6931   p99      6.444 ->      6.605
+  item_ctr                 KS=0.035  median    0.03846 ->    0.03704   p99      0.161 ->     0.1429
+  item_log_impr            KS=0.027  median      6.004 ->      5.945   p99      9.495 ->      9.541
+  item_log_clicks          KS=0.023  median      2.398 ->      2.303   p99      7.023 ->      6.989
+  item_cold                KS=0.010  median          0 ->          0   p99          1 ->          1
+  in_top_two_tower         KS=0.002  median          0 ->          0   p99          1 ->          1
+  in_top_graph             KS=0.001  median          0 ->          0   p99          1 ->          1
+  in_top_popular           KS=0.001  median          0 ->          0   p99          1 ->          1
+  in_top_itemknn           KS=0.001  median          0 ->          0   p99          1 ->          1
+
+== 3. GBDT ablations ==
+  gbdt no item_age_h (it=98)         val-heldout  NDCG@10 within union = 0.2016  (groups=1792)
+  gbdt no item_age_h (it=98)         test         NDCG@10 within union = 0.0627  (groups=11811)
+  gbdt no age/ctr/recent (it=205)    val-heldout  NDCG@10 within union = 0.1990  (groups=1792)
+  gbdt no age/ctr/recent (it=205)    test         NDCG@10 within union = 0.0717  (groups=11811)
+  gbdt no retrieval scores (it=123)  val-heldout  NDCG@10 within union = 0.2453  (groups=1792)
+  gbdt no retrieval scores (it=123)  test         NDCG@10 within union = 0.0384  (groups=11811)
+  gbdt only retrieval scores+in_top (it=96) val-heldout  NDCG@10 within union = 0.0915  (groups=1792)
+  gbdt only retrieval scores+in_top (it=96) test         NDCG@10 within union = 0.1162  (groups=11811)

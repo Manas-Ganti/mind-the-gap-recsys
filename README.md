@@ -33,7 +33,7 @@ models.
 MIND behaviors.tsv / news.tsv
   │
   ├─[1] INGEST (Spark)      parse impressions (shown + clicked), histories, news text → parquet
-  ├─[2] SPLIT + AUDIT       temporal (primary) · temporal_val (tuning) · random (comparison)
+  ├─[2] SPLIT + AUDIT       temporal (primary) · temporal_val (tuning, ranker selection) · temporal_rtrain (ranker training) · random (comparison)
   │                         Spark-sampled negatives · leakage + cold-start audit
   ├─[3] EVALUATION HARNESS  full catalog vs sampled, paired · retrieval ceiling · popularity
   ├─[4] RETRIEVAL           popular (tuned window) · item-kNN (tuned) · RP3beta graph · two-tower
@@ -67,6 +67,13 @@ MIND behaviors.tsv / news.tsv
   "sampled" number scores the positive against the sampled negatives, which bypasses
   retrieval. That is exactly what a sampled evaluation of a ranker implicitly does, and it
   is reported as such.
+- **Rankers are selected on a later day, not on held-out users from the same day.** They
+  train on 2019-11-13 candidates (retrievers fitted before that day), are early-stopped and
+  pick one of three feature sets declared in `configs/` (`all`, `time_invariant`,
+  `retrieval_only`) by their score on 2019-11-14, and are then refit on 2019-11-14 for the
+  chosen number of rounds. A same-day user holdout cannot see day-to-day shift. On
+  MIND-small it rated the GBDT far above what it scored on test
+  (`results/mind_small/diagnostics/`).
 - **Graph = RP3beta, not LightGCN.** It is the spec's "co-occurrence graph with
   propagation" option. It is a strong and cheap baseline, and choosing it keeps the budget
   on the evaluation.
@@ -126,8 +133,8 @@ pytest                                    # metric verification, protocol, ceili
 
 # see data/download.md, then:
 recsys ingest      # Spark → data/processed/ingest, results/dataset_stats.json
-recsys split       # Spark → temporal / temporal_val / random + negatives, results/split_audit.json
-recsys train       # tune on temporal_val (baselines first), train rankers, refit on eval splits
+recsys split       # Spark → temporal / temporal_val / temporal_rtrain / random + negatives, results/split_audit.json
+recsys train       # tune on temporal_val (baselines first), train rankers on temporal_rtrain, select + refit on temporal_val, refit retrievers on eval splits
 recsys evaluate    # → results/metrics.json (seed + date recorded), results/raw/*.npz
 recsys serve       # FAISS → results/ann.json
 recsys report      # → results/report.md, figures/, gate verdicts in GATES.md
@@ -177,8 +184,11 @@ tests/                every metric vs hand-worked / sklearn references; leakage;
   encoder would probably do better on news-specific semantics. Freezing it keeps the
   neural model cheap and leaves the comparison about retrieval design, not language-model
   fine-tuning.
-- **The rankers are trained on one validation day** of candidates from retrievers fitted on
-  less data than the test-time retrievers, so there is a small train/serve feature skew.
+- **The rankers see one day at a time.** They are selected on 2019-11-14 and refit on it,
+  with candidates from retrievers fitted on less data than the test-time retrievers, so
+  some train/serve feature skew remains. The selection day also comes from MIND's `train`
+  file, while the test day is its `dev` file, which samples users differently. A
+  next-day check inside `train` may therefore under-state the shift to test.
 - **The ANN benchmark measures single-thread, in-process latency** on the local machine. It
   is a tradeoff curve, not a capacity number.
 - **Engineering note:** on macOS arm64, torch and LightGBM each bundle libomp and segfault

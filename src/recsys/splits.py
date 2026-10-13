@@ -1,10 +1,12 @@
 """[2] SPLIT + AUDIT.
 
-Three splits, all written under {processed_dir}/splits/{name}/:
+Four splits, all written under {processed_dir}/splits/{name}/:
 
   temporal      train: impressions before `temporal_cutoff`   test: clicks at/after it   (PRIMARY)
   temporal_val  train: before `validation_cutoff`              test: [validation_cutoff, temporal_cutoff)
-                used for hyperparameter tuning and ranker training; never touches temporal test
+                retriever tuning and ranker selection; never touches temporal test
+  temporal_rtrain  train: before `ranker_train_cutoff`        test: [ranker_train_cutoff, validation_cutoff)
+                ranker training data, one day before the day the rankers are selected on
   random        test: a seeded random sample of window clicks, same size fraction as temporal.
                 COMPARISON ARTIFACT ONLY. It lets the model see Tuesday while predicting Monday.
 
@@ -33,7 +35,7 @@ import pandas as pd
 
 from recsys.config import Config, SplitCfg
 
-SPLITS = ("temporal", "temporal_val", "random")
+SPLITS = ("temporal", "temporal_val", "temporal_rtrain", "random")
 
 
 def split_dir(cfg: Config, name: str) -> Path:
@@ -218,6 +220,7 @@ def build_splits(cfg: Config, spark=None, only: list[str] | None = None) -> dict
     hist = spark.read.parquet(str(ing / "histories"))
     cut = SplitCfg.epoch(cfg.split.temporal_cutoff)
     vcut = SplitCfg.epoch(cfg.split.validation_cutoff)
+    rcut = SplitCfg.epoch(cfg.split.ranker_train_cutoff)
     todo = only or list(SPLITS)
     metas = {}
 
@@ -237,6 +240,15 @@ def build_splits(cfg: Config, spark=None, only: list[str] | None = None) -> dict
             test_click_rows=before.filter((F.col("ts") >= vcut) & (F.col("clicked") == 1)),
             all_rows=before, history=_history(hist, cfg, vcut),
             reference_ts=vcut, max_eval_users=cfg.split.max_val_users, cutoff_ts=vcut)
+
+    if "temporal_rtrain" in todo:
+        before = imp.filter(F.col("ts") < vcut)
+        metas["temporal_rtrain"] = _build(
+            spark, cfg, "temporal_rtrain",
+            train_rows=before.filter(F.col("ts") < rcut),
+            test_click_rows=before.filter((F.col("ts") >= rcut) & (F.col("clicked") == 1)),
+            all_rows=before, history=_history(hist, cfg, rcut),
+            reference_ts=rcut, max_eval_users=cfg.split.max_val_users, cutoff_ts=rcut)
 
     if "random" in todo:
         clicks = imp.filter("clicked = 1")
@@ -258,7 +270,7 @@ def build_splits(cfg: Config, spark=None, only: list[str] | None = None) -> dict
 
     audits = {}
     for name in todo:
-        audits[name] = audit_split(cfg, name, cutoff_ts={"temporal": cut, "temporal_val": vcut}.get(name))
+        audits[name] = audit_split(cfg, name, cutoff_ts={"temporal": cut, "temporal_val": vcut, "temporal_rtrain": rcut}.get(name))
     results = Path(cfg.paths.results_dir)
     results.mkdir(parents=True, exist_ok=True)
     prev = results / "split_audit.json"

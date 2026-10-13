@@ -35,6 +35,14 @@ Recorded 2026-10-12, after the original spec was written.
 6. **Build order checkpoint:** Spark ingestion and the evaluation harness are run on
    MIND-small and shown scoring dummy rankings (random, oracle) under both protocols before any
    model is trained (`recsys harness-check`).
+7. **Rankers are selected on a later day** (recorded 2026-10-13, after the first multi-seed
+   MIND-small run). Train on the `temporal_rtrain` day (2019-11-13), early-stop and choose
+   one of the feature sets declared in `configs/` on `temporal_val` (2019-11-14), and refit
+   the choice on 2019-11-14. This replaces the same-day user holdout, which a diagnostic
+   showed rewarded the GBDT for patterns that did not hold on the next day. The feature sets
+   were declared after that diagnostic, which looked at test-day feature distributions and
+   test-day ablations. That is disclosed here, and the choice among them is made only on
+   2019-11-14.
 
 ## HOW TO WORK ON THIS PROJECT (read first)
 
