@@ -1,0 +1,276 @@
+[arc_env] python=/home/manasganti/miniconda3/envs/recsys/bin/python 3.12.15
+[arc_env] java=openjdk version "17.0.18-internal" 2026-01-20
+[arc_env] node=owl039 cpus=96 mem=32768MB commit=570e795 hf_home=/home/manasganti/hf_cache spark_local=/localscratch-nvme/1133598
+[arc_env] requires recsys pyspark pandas pyarrow scipy sklearn lightgbm torch faiss matplotlib yaml sentence_transformers - present
+[pipeline] config=configs/arc_mind_small.yaml fingerprint=bf917a05ade7
+[pipeline] variant=small raw=/home/manasganti/ondemand/data/mind-the-gap-recsys/data/raw results=/home/manasganti/ondemand/data/mind-the-gap-recsys/results/mind_small
+[pipeline] spark master=local[96] driver_memory=48g
+[pipeline] stages: split train evaluate serve report
+[pipeline] ==== split  2026-10-13 03:40:16Z
+== split ==
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+26/10/12 23:40:23 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+[pipeline] ==== split done in 111 s
+[pipeline] ==== train  2026-10-13 03:42:07Z
+== train ==
+  [tune] popular {'window_hours': 0.5} ndcg@10=0.01670
+  [tune] popular {'window_hours': 1.0} ndcg@10=0.01797
+  [tune] popular {'window_hours': 2.0} ndcg@10=0.01677
+  [tune] popular {'window_hours': 3.0} ndcg@10=0.01533
+  [tune] popular {'window_hours': 6.0} ndcg@10=0.01064
+  [tune] popular {'window_hours': 12.0} ndcg@10=0.00448
+  [tune] popular {'window_hours': 24.0} ndcg@10=0.00172
+  [tune] popular {'window_hours': 72.0} ndcg@10=0.00085
+  [tune] popular {'window_hours': None} ndcg@10=0.00050
+  [tune] itemknn {'neighbors': 50, 'shrink': 0.0, 'alpha': 0.3} ndcg@10=0.00271
+  [tune] itemknn {'neighbors': 50, 'shrink': 0.0, 'alpha': 0.5} ndcg@10=0.00233
+  [tune] itemknn {'neighbors': 50, 'shrink': 0.0, 'alpha': 0.7} ndcg@10=0.00225
+  [tune] itemknn {'neighbors': 50, 'shrink': 0.0, 'alpha': 0.85} ndcg@10=0.00215
+  [tune] itemknn {'neighbors': 50, 'shrink': 0.0, 'alpha': 1.0} ndcg@10=0.00189
+  [tune] itemknn {'neighbors': 50, 'shrink': 10.0, 'alpha': 0.3} ndcg@10=0.00309
+  [tune] itemknn {'neighbors': 50, 'shrink': 10.0, 'alpha': 0.5} ndcg@10=0.00280
+  [tune] itemknn {'neighbors': 50, 'shrink': 10.0, 'alpha': 0.7} ndcg@10=0.00253
+  [tune] itemknn {'neighbors': 50, 'shrink': 10.0, 'alpha': 0.85} ndcg@10=0.00324
+  [tune] itemknn {'neighbors': 50, 'shrink': 10.0, 'alpha': 1.0} ndcg@10=0.00286
+  [tune] itemknn {'neighbors': 50, 'shrink': 50.0, 'alpha': 0.3} ndcg@10=0.00292
+  [tune] itemknn {'neighbors': 50, 'shrink': 50.0, 'alpha': 0.5} ndcg@10=0.00292
+  [tune] itemknn {'neighbors': 50, 'shrink': 50.0, 'alpha': 0.7} ndcg@10=0.00295
+  [tune] itemknn {'neighbors': 50, 'shrink': 50.0, 'alpha': 0.85} ndcg@10=0.00350
+  [tune] itemknn {'neighbors': 50, 'shrink': 50.0, 'alpha': 1.0} ndcg@10=0.00422
+  [tune] itemknn {'neighbors': 50, 'shrink': 200.0, 'alpha': 0.3} ndcg@10=0.00219
+  [tune] itemknn {'neighbors': 50, 'shrink': 200.0, 'alpha': 0.5} ndcg@10=0.00206
+  [tune] itemknn {'neighbors': 50, 'shrink': 200.0, 'alpha': 0.7} ndcg@10=0.00214
+  [tune] itemknn {'neighbors': 50, 'shrink': 200.0, 'alpha': 0.85} ndcg@10=0.00255
+  [tune] itemknn {'neighbors': 50, 'shrink': 200.0, 'alpha': 1.0} ndcg@10=0.00277
+  [tune] itemknn {'neighbors': 100, 'shrink': 0.0, 'alpha': 0.3} ndcg@10=0.00285
+  [tune] itemknn {'neighbors': 100, 'shrink': 0.0, 'alpha': 0.5} ndcg@10=0.00236
+  [tune] itemknn {'neighbors': 100, 'shrink': 0.0, 'alpha': 0.7} ndcg@10=0.00225
+  [tune] itemknn {'neighbors': 100, 'shrink': 0.0, 'alpha': 0.85} ndcg@10=0.00305
+  [tune] itemknn {'neighbors': 100, 'shrink': 0.0, 'alpha': 1.0} ndcg@10=0.00204
+  [tune] itemknn {'neighbors': 100, 'shrink': 10.0, 'alpha': 0.3} ndcg@10=0.00370
+  [tune] itemknn {'neighbors': 100, 'shrink': 10.0, 'alpha': 0.5} ndcg@10=0.00233
+  [tune] itemknn {'neighbors': 100, 'shrink': 10.0, 'alpha': 0.7} ndcg@10=0.00248
+  [tune] itemknn {'neighbors': 100, 'shrink': 10.0, 'alpha': 0.85} ndcg@10=0.00322
+  [tune] itemknn {'neighbors': 100, 'shrink': 10.0, 'alpha': 1.0} ndcg@10=0.00319
+  [tune] itemknn {'neighbors': 100, 'shrink': 50.0, 'alpha': 0.3} ndcg@10=0.00334
+  [tune] itemknn {'neighbors': 100, 'shrink': 50.0, 'alpha': 0.5} ndcg@10=0.00274
+  [tune] itemknn {'neighbors': 100, 'shrink': 50.0, 'alpha': 0.7} ndcg@10=0.00268
+  [tune] itemknn {'neighbors': 100, 'shrink': 50.0, 'alpha': 0.85} ndcg@10=0.00358
+  [tune] itemknn {'neighbors': 100, 'shrink': 50.0, 'alpha': 1.0} ndcg@10=0.00394
+  [tune] itemknn {'neighbors': 100, 'shrink': 200.0, 'alpha': 0.3} ndcg@10=0.00209
+  [tune] itemknn {'neighbors': 100, 'shrink': 200.0, 'alpha': 0.5} ndcg@10=0.00192
+  [tune] itemknn {'neighbors': 100, 'shrink': 200.0, 'alpha': 0.7} ndcg@10=0.00190
+  [tune] itemknn {'neighbors': 100, 'shrink': 200.0, 'alpha': 0.85} ndcg@10=0.00213
+  [tune] itemknn {'neighbors': 100, 'shrink': 200.0, 'alpha': 1.0} ndcg@10=0.00250
+  [tune] itemknn {'neighbors': 200, 'shrink': 0.0, 'alpha': 0.3} ndcg@10=0.00264
+  [tune] itemknn {'neighbors': 200, 'shrink': 0.0, 'alpha': 0.5} ndcg@10=0.00267
+  [tune] itemknn {'neighbors': 200, 'shrink': 0.0, 'alpha': 0.7} ndcg@10=0.00365
+  [tune] itemknn {'neighbors': 200, 'shrink': 0.0, 'alpha': 0.85} ndcg@10=0.00412
+  [tune] itemknn {'neighbors': 200, 'shrink': 0.0, 'alpha': 1.0} ndcg@10=0.00339
+  [tune] itemknn {'neighbors': 200, 'shrink': 10.0, 'alpha': 0.3} ndcg@10=0.00326
+  [tune] itemknn {'neighbors': 200, 'shrink': 10.0, 'alpha': 0.5} ndcg@10=0.00259
+  [tune] itemknn {'neighbors': 200, 'shrink': 10.0, 'alpha': 0.7} ndcg@10=0.00292
+  [tune] itemknn {'neighbors': 200, 'shrink': 10.0, 'alpha': 0.85} ndcg@10=0.00381
+  [tune] itemknn {'neighbors': 200, 'shrink': 10.0, 'alpha': 1.0} ndcg@10=0.00375
+  [tune] itemknn {'neighbors': 200, 'shrink': 50.0, 'alpha': 0.3} ndcg@10=0.00271
+  [tune] itemknn {'neighbors': 200, 'shrink': 50.0, 'alpha': 0.5} ndcg@10=0.00229
+  [tune] itemknn {'neighbors': 200, 'shrink': 50.0, 'alpha': 0.7} ndcg@10=0.00232
+  [tune] itemknn {'neighbors': 200, 'shrink': 50.0, 'alpha': 0.85} ndcg@10=0.00257
+  [tune] itemknn {'neighbors': 200, 'shrink': 50.0, 'alpha': 1.0} ndcg@10=0.00320
+  [tune] itemknn {'neighbors': 200, 'shrink': 200.0, 'alpha': 0.3} ndcg@10=0.00185
+  [tune] itemknn {'neighbors': 200, 'shrink': 200.0, 'alpha': 0.5} ndcg@10=0.00167
+  [tune] itemknn {'neighbors': 200, 'shrink': 200.0, 'alpha': 0.7} ndcg@10=0.00167
+  [tune] itemknn {'neighbors': 200, 'shrink': 200.0, 'alpha': 0.85} ndcg@10=0.00164
+  [tune] itemknn {'neighbors': 200, 'shrink': 200.0, 'alpha': 1.0} ndcg@10=0.00198
+  [tune] itemknn {'neighbors': 500, 'shrink': 0.0, 'alpha': 0.3} ndcg@10=0.00283
+  [tune] itemknn {'neighbors': 500, 'shrink': 0.0, 'alpha': 0.5} ndcg@10=0.00233
+  [tune] itemknn {'neighbors': 500, 'shrink': 0.0, 'alpha': 0.7} ndcg@10=0.00491
+  [tune] itemknn {'neighbors': 500, 'shrink': 0.0, 'alpha': 0.85} ndcg@10=0.00640
+  [tune] itemknn {'neighbors': 500, 'shrink': 0.0, 'alpha': 1.0} ndcg@10=0.00486
+  [tune] itemknn {'neighbors': 500, 'shrink': 10.0, 'alpha': 0.3} ndcg@10=0.00307
+  [tune] itemknn {'neighbors': 500, 'shrink': 10.0, 'alpha': 0.5} ndcg@10=0.00211
+  [tune] itemknn {'neighbors': 500, 'shrink': 10.0, 'alpha': 0.7} ndcg@10=0.00265
+  [tune] itemknn {'neighbors': 500, 'shrink': 10.0, 'alpha': 0.85} ndcg@10=0.00416
+  [tune] itemknn {'neighbors': 500, 'shrink': 10.0, 'alpha': 1.0} ndcg@10=0.00490
+  [tune] itemknn {'neighbors': 500, 'shrink': 50.0, 'alpha': 0.3} ndcg@10=0.00241
+  [tune] itemknn {'neighbors': 500, 'shrink': 50.0, 'alpha': 0.5} ndcg@10=0.00187
+  [tune] itemknn {'neighbors': 500, 'shrink': 50.0, 'alpha': 0.7} ndcg@10=0.00184
+  [tune] itemknn {'neighbors': 500, 'shrink': 50.0, 'alpha': 0.85} ndcg@10=0.00223
+  [tune] itemknn {'neighbors': 500, 'shrink': 50.0, 'alpha': 1.0} ndcg@10=0.00275
+  [tune] itemknn {'neighbors': 500, 'shrink': 200.0, 'alpha': 0.3} ndcg@10=0.00148
+  [tune] itemknn {'neighbors': 500, 'shrink': 200.0, 'alpha': 0.5} ndcg@10=0.00155
+  [tune] itemknn {'neighbors': 500, 'shrink': 200.0, 'alpha': 0.7} ndcg@10=0.00142
+  [tune] itemknn {'neighbors': 500, 'shrink': 200.0, 'alpha': 0.85} ndcg@10=0.00155
+  [tune] itemknn {'neighbors': 500, 'shrink': 200.0, 'alpha': 1.0} ndcg@10=0.00159
+  [tune] itemknn {'neighbors': 1000, 'shrink': 0.0, 'alpha': 0.3} ndcg@10=0.00280
+  [tune] itemknn {'neighbors': 1000, 'shrink': 0.0, 'alpha': 0.5} ndcg@10=0.00233
+  [tune] itemknn {'neighbors': 1000, 'shrink': 0.0, 'alpha': 0.7} ndcg@10=0.00466
+  [tune] itemknn {'neighbors': 1000, 'shrink': 0.0, 'alpha': 0.85} ndcg@10=0.00585
+  [tune] itemknn {'neighbors': 1000, 'shrink': 0.0, 'alpha': 1.0} ndcg@10=0.00567
+  [tune] itemknn {'neighbors': 1000, 'shrink': 10.0, 'alpha': 0.3} ndcg@10=0.00312
+  [tune] itemknn {'neighbors': 1000, 'shrink': 10.0, 'alpha': 0.5} ndcg@10=0.00196
+  [tune] itemknn {'neighbors': 1000, 'shrink': 10.0, 'alpha': 0.7} ndcg@10=0.00267
+  [tune] itemknn {'neighbors': 1000, 'shrink': 10.0, 'alpha': 0.85} ndcg@10=0.00408
+  [tune] itemknn {'neighbors': 1000, 'shrink': 10.0, 'alpha': 1.0} ndcg@10=0.00429
+  [tune] itemknn {'neighbors': 1000, 'shrink': 50.0, 'alpha': 0.3} ndcg@10=0.00221
+  [tune] itemknn {'neighbors': 1000, 'shrink': 50.0, 'alpha': 0.5} ndcg@10=0.00158
+  [tune] itemknn {'neighbors': 1000, 'shrink': 50.0, 'alpha': 0.7} ndcg@10=0.00160
+  [tune] itemknn {'neighbors': 1000, 'shrink': 50.0, 'alpha': 0.85} ndcg@10=0.00156
+  [tune] itemknn {'neighbors': 1000, 'shrink': 50.0, 'alpha': 1.0} ndcg@10=0.00181
+  [tune] itemknn {'neighbors': 1000, 'shrink': 200.0, 'alpha': 0.3} ndcg@10=0.00140
+  [tune] itemknn {'neighbors': 1000, 'shrink': 200.0, 'alpha': 0.5} ndcg@10=0.00119
+  [tune] itemknn {'neighbors': 1000, 'shrink': 200.0, 'alpha': 0.7} ndcg@10=0.00116
+  [tune] itemknn {'neighbors': 1000, 'shrink': 200.0, 'alpha': 0.85} ndcg@10=0.00133
+  [tune] itemknn {'neighbors': 1000, 'shrink': 200.0, 'alpha': 1.0} ndcg@10=0.00125
+  [tune] itemknn {'neighbors': 2000, 'shrink': 0.0, 'alpha': 0.3} ndcg@10=0.00260
+  [tune] itemknn {'neighbors': 2000, 'shrink': 0.0, 'alpha': 0.5} ndcg@10=0.00229
+  [tune] itemknn {'neighbors': 2000, 'shrink': 0.0, 'alpha': 0.7} ndcg@10=0.00305
+  [tune] itemknn {'neighbors': 2000, 'shrink': 0.0, 'alpha': 0.85} ndcg@10=0.00522
+  [tune] itemknn {'neighbors': 2000, 'shrink': 0.0, 'alpha': 1.0} ndcg@10=0.00436
+  [tune] itemknn {'neighbors': 2000, 'shrink': 10.0, 'alpha': 0.3} ndcg@10=0.00266
+  [tune] itemknn {'neighbors': 2000, 'shrink': 10.0, 'alpha': 0.5} ndcg@10=0.00187
+  [tune] itemknn {'neighbors': 2000, 'shrink': 10.0, 'alpha': 0.7} ndcg@10=0.00196
+  [tune] itemknn {'neighbors': 2000, 'shrink': 10.0, 'alpha': 0.85} ndcg@10=0.00292
+  [tune] itemknn {'neighbors': 2000, 'shrink': 10.0, 'alpha': 1.0} ndcg@10=0.00334
+  [tune] itemknn {'neighbors': 2000, 'shrink': 50.0, 'alpha': 0.3} ndcg@10=0.00187
+  [tune] itemknn {'neighbors': 2000, 'shrink': 50.0, 'alpha': 0.5} ndcg@10=0.00144
+  [tune] itemknn {'neighbors': 2000, 'shrink': 50.0, 'alpha': 0.7} ndcg@10=0.00140
+  [tune] itemknn {'neighbors': 2000, 'shrink': 50.0, 'alpha': 0.85} ndcg@10=0.00123
+  [tune] itemknn {'neighbors': 2000, 'shrink': 50.0, 'alpha': 1.0} ndcg@10=0.00135
+  [tune] itemknn {'neighbors': 2000, 'shrink': 200.0, 'alpha': 0.3} ndcg@10=0.00117
+  [tune] itemknn {'neighbors': 2000, 'shrink': 200.0, 'alpha': 0.5} ndcg@10=0.00113
+  [tune] itemknn {'neighbors': 2000, 'shrink': 200.0, 'alpha': 0.7} ndcg@10=0.00113
+  [tune] itemknn {'neighbors': 2000, 'shrink': 200.0, 'alpha': 0.85} ndcg@10=0.00102
+  [tune] itemknn {'neighbors': 2000, 'shrink': 200.0, 'alpha': 1.0} ndcg@10=0.00095
+  [tune] graph {'neighbors': 100, 'alpha': 0.5, 'beta': 0.0} ndcg@10=0.00132
+  [tune] graph {'neighbors': 100, 'alpha': 0.5, 'beta': 0.2} ndcg@10=0.00162
+  [tune] graph {'neighbors': 100, 'alpha': 0.5, 'beta': 0.4} ndcg@10=0.00223
+  [tune] graph {'neighbors': 100, 'alpha': 0.5, 'beta': 0.6} ndcg@10=0.00319
+  [tune] graph {'neighbors': 100, 'alpha': 0.8, 'beta': 0.0} ndcg@10=0.00474
+  [tune] graph {'neighbors': 100, 'alpha': 0.8, 'beta': 0.2} ndcg@10=0.00462
+  [tune] graph {'neighbors': 100, 'alpha': 0.8, 'beta': 0.4} ndcg@10=0.00417
+  [tune] graph {'neighbors': 100, 'alpha': 0.8, 'beta': 0.6} ndcg@10=0.00330
+  [tune] graph {'neighbors': 100, 'alpha': 1.0, 'beta': 0.0} ndcg@10=0.00311
+  [tune] graph {'neighbors': 100, 'alpha': 1.0, 'beta': 0.2} ndcg@10=0.00303
+  [tune] graph {'neighbors': 100, 'alpha': 1.0, 'beta': 0.4} ndcg@10=0.00299
+  [tune] graph {'neighbors': 100, 'alpha': 1.0, 'beta': 0.6} ndcg@10=0.00264
+  [tune] graph {'neighbors': 300, 'alpha': 0.5, 'beta': 0.0} ndcg@10=0.00093
+  [tune] graph {'neighbors': 300, 'alpha': 0.5, 'beta': 0.2} ndcg@10=0.00143
+  [tune] graph {'neighbors': 300, 'alpha': 0.5, 'beta': 0.4} ndcg@10=0.00238
+  [tune] graph {'neighbors': 300, 'alpha': 0.5, 'beta': 0.6} ndcg@10=0.00361
+  [tune] graph {'neighbors': 300, 'alpha': 0.8, 'beta': 0.0} ndcg@10=0.00606
+  [tune] graph {'neighbors': 300, 'alpha': 0.8, 'beta': 0.2} ndcg@10=0.00628
+  [tune] graph {'neighbors': 300, 'alpha': 0.8, 'beta': 0.4} ndcg@10=0.00583
+  [tune] graph {'neighbors': 300, 'alpha': 0.8, 'beta': 0.6} ndcg@10=0.00419
+  [tune] graph {'neighbors': 300, 'alpha': 1.0, 'beta': 0.0} ndcg@10=0.00467
+  [tune] graph {'neighbors': 300, 'alpha': 1.0, 'beta': 0.2} ndcg@10=0.00496
+  [tune] graph {'neighbors': 300, 'alpha': 1.0, 'beta': 0.4} ndcg@10=0.00451
+  [tune] graph {'neighbors': 300, 'alpha': 1.0, 'beta': 0.6} ndcg@10=0.00351
+  [tune] graph {'neighbors': 1000, 'alpha': 0.5, 'beta': 0.0} ndcg@10=0.00102
+  [tune] graph {'neighbors': 1000, 'alpha': 0.5, 'beta': 0.2} ndcg@10=0.00139
+  [tune] graph {'neighbors': 1000, 'alpha': 0.5, 'beta': 0.4} ndcg@10=0.00200
+  [tune] graph {'neighbors': 1000, 'alpha': 0.5, 'beta': 0.6} ndcg@10=0.00384
+  [tune] graph {'neighbors': 1000, 'alpha': 0.8, 'beta': 0.0} ndcg@10=0.00428
+  [tune] graph {'neighbors': 1000, 'alpha': 0.8, 'beta': 0.2} ndcg@10=0.00538
+  [tune] graph {'neighbors': 1000, 'alpha': 0.8, 'beta': 0.4} ndcg@10=0.00614
+  [tune] graph {'neighbors': 1000, 'alpha': 0.8, 'beta': 0.6} ndcg@10=0.00530
+  [tune] graph {'neighbors': 1000, 'alpha': 1.0, 'beta': 0.0} ndcg@10=0.00504
+  [tune] graph {'neighbors': 1000, 'alpha': 1.0, 'beta': 0.2} ndcg@10=0.00589
+  [tune] graph {'neighbors': 1000, 'alpha': 1.0, 'beta': 0.4} ndcg@10=0.00581
+  [tune] graph {'neighbors': 1000, 'alpha': 1.0, 'beta': 0.6} ndcg@10=0.00428
+  [tune] graph {'neighbors': 2000, 'alpha': 0.5, 'beta': 0.0} ndcg@10=0.00099
+  [tune] graph {'neighbors': 2000, 'alpha': 0.5, 'beta': 0.2} ndcg@10=0.00138
+  [tune] graph {'neighbors': 2000, 'alpha': 0.5, 'beta': 0.4} ndcg@10=0.00181
+  [tune] graph {'neighbors': 2000, 'alpha': 0.5, 'beta': 0.6} ndcg@10=0.00383
+  [tune] graph {'neighbors': 2000, 'alpha': 0.8, 'beta': 0.0} ndcg@10=0.00238
+  [tune] graph {'neighbors': 2000, 'alpha': 0.8, 'beta': 0.2} ndcg@10=0.00401
+  [tune] graph {'neighbors': 2000, 'alpha': 0.8, 'beta': 0.4} ndcg@10=0.00503
+  [tune] graph {'neighbors': 2000, 'alpha': 0.8, 'beta': 0.6} ndcg@10=0.00552
+  [tune] graph {'neighbors': 2000, 'alpha': 1.0, 'beta': 0.0} ndcg@10=0.00415
+  [tune] graph {'neighbors': 2000, 'alpha': 1.0, 'beta': 0.2} ndcg@10=0.00536
+  [tune] graph {'neighbors': 2000, 'alpha': 1.0, 'beta': 0.4} ndcg@10=0.00611
+  [tune] graph {'neighbors': 2000, 'alpha': 1.0, 'beta': 0.6} ndcg@10=0.00476
+  [tune] two_tower {'temperature': 0.005} seed=42 ndcg@10=0.00376
+  [tune] two_tower {'temperature': 0.005} seed=43 ndcg@10=0.00154
+  [tune] two_tower {'temperature': 0.005} seed=44 ndcg@10=0.00267
+  [tune] two_tower {'temperature': 0.005} mean ndcg@10=0.00265 sd=0.00111
+  [tune] two_tower {'temperature': 0.01} seed=42 ndcg@10=0.00696
+  [tune] two_tower {'temperature': 0.01} seed=43 ndcg@10=0.00162
+  [tune] two_tower {'temperature': 0.01} seed=44 ndcg@10=0.00302
+  [tune] two_tower {'temperature': 0.01} mean ndcg@10=0.00386 sd=0.00277
+  [tune] two_tower {'temperature': 0.02} seed=42 ndcg@10=0.00366
+  [tune] two_tower {'temperature': 0.02} seed=43 ndcg@10=0.00310
+  [tune] two_tower {'temperature': 0.02} seed=44 ndcg@10=0.00478
+  [tune] two_tower {'temperature': 0.02} mean ndcg@10=0.00385 sd=0.00086
+  [tune] two_tower {'temperature': 0.05} seed=42 ndcg@10=0.00290
+  [tune] two_tower {'temperature': 0.05} seed=43 ndcg@10=0.00267
+  [tune] two_tower {'temperature': 0.05} seed=44 ndcg@10=0.00351
+  [tune] two_tower {'temperature': 0.05} mean ndcg@10=0.00302 sd=0.00044
+  [tune] two_tower {'temperature': 0.1} seed=42 ndcg@10=0.00212
+  [tune] two_tower {'temperature': 0.1} seed=43 ndcg@10=0.00234
+  [tune] two_tower {'temperature': 0.1} seed=44 ndcg@10=0.00308
+  [tune] two_tower {'temperature': 0.1} mean ndcg@10=0.00251 sd=0.00050
+  [tune] two_tower {'temperature': 0.2} seed=42 ndcg@10=0.00072
+  [tune] two_tower {'temperature': 0.2} seed=43 ndcg@10=0.00080
+  [tune] two_tower {'temperature': 0.2} seed=44 ndcg@10=0.00093
+  [tune] two_tower {'temperature': 0.2} mean ndcg@10=0.00082 sd=0.00011
+  [rankers] seed 42: candidates for 2019-11-13 (train) and 2019-11-14 (select)
+  [rankers] seed 42 gbdt all: ndcg@10 within candidates on 2019-11-14 = 0.10393 (16 rounds)
+  [rankers] seed 42 neural all: ndcg@10 within candidates on 2019-11-14 = 0.11489 (7 rounds)
+  [rankers] seed 42 gbdt time_invariant: ndcg@10 within candidates on 2019-11-14 = 0.07517 (268 rounds)
+  [rankers] seed 42 neural time_invariant: ndcg@10 within candidates on 2019-11-14 = 0.10292 (7 rounds)
+  [rankers] seed 42 gbdt retrieval_only: ndcg@10 within candidates on 2019-11-14 = 0.04084 (4 rounds)
+  [rankers] seed 42 neural retrieval_only: ndcg@10 within candidates on 2019-11-14 = 0.04584 (1 rounds)
+  [rankers] seed 43: candidates for 2019-11-13 (train) and 2019-11-14 (select)
+  [rankers] seed 43 gbdt all: ndcg@10 within candidates on 2019-11-14 = 0.08023 (88 rounds)
+  [rankers] seed 43 neural all: ndcg@10 within candidates on 2019-11-14 = 0.09315 (7 rounds)
+  [rankers] seed 43 gbdt time_invariant: ndcg@10 within candidates on 2019-11-14 = 0.08389 (16 rounds)
+  [rankers] seed 43 neural time_invariant: ndcg@10 within candidates on 2019-11-14 = 0.08415 (1 rounds)
+  [rankers] seed 43 gbdt retrieval_only: ndcg@10 within candidates on 2019-11-14 = 0.04162 (2 rounds)
+  [rankers] seed 43 neural retrieval_only: ndcg@10 within candidates on 2019-11-14 = 0.04430 (1 rounds)
+  [rankers] seed 44: candidates for 2019-11-13 (train) and 2019-11-14 (select)
+  [rankers] seed 44 gbdt all: ndcg@10 within candidates on 2019-11-14 = 0.07003 (37 rounds)
+  [rankers] seed 44 neural all: ndcg@10 within candidates on 2019-11-14 = 0.06566 (1 rounds)
+  [rankers] seed 44 gbdt time_invariant: ndcg@10 within candidates on 2019-11-14 = 0.07594 (7 rounds)
+  [rankers] seed 44 neural time_invariant: ndcg@10 within candidates on 2019-11-14 = 0.06176 (1 rounds)
+  [rankers] seed 44 gbdt retrieval_only: ndcg@10 within candidates on 2019-11-14 = 0.05162 (3 rounds)
+  [rankers] seed 44 neural retrieval_only: ndcg@10 within candidates on 2019-11-14 = 0.05225 (4 rounds)
+  [rankers] gbdt: chose feature set 'all' all=0.08473 time_invariant=0.07833 retrieval_only=0.04469
+  [rankers] neural: chose feature set 'all' all=0.09123 time_invariant=0.08294 retrieval_only=0.04746
+  [fit] rankers/gbdt_seed42: 'all' refit on 2019-11-14 for 16 rounds
+  [fit] rankers/neural_seed42: 'all' refit on 2019-11-14 for 7 rounds
+  [fit] rankers/gbdt_seed43: 'all' refit on 2019-11-14 for 88 rounds
+  [fit] rankers/neural_seed43: 'all' refit on 2019-11-14 for 7 rounds
+  [fit] rankers/gbdt_seed44: 'all' refit on 2019-11-14 for 37 rounds
+  [fit] rankers/neural_seed44: 'all' refit on 2019-11-14 for 1 rounds
+  [fit] temporal/popular {'window_hours': 1.0}
+  [fit] temporal/itemknn {'neighbors': 500, 'shrink': 0.0, 'alpha': 0.85}
+  [fit] temporal/graph {'neighbors': 300, 'alpha': 0.8, 'beta': 0.2}
+  [fit] temporal/two_tower seed=42 {'temperature': 0.01}
+  [fit] temporal/two_tower seed=43 {'temperature': 0.01}
+  [fit] temporal/two_tower seed=44 {'temperature': 0.01}
+  [fit] random/popular {'window_hours': 1.0}
+  [fit] random/itemknn {'neighbors': 500, 'shrink': 0.0, 'alpha': 0.85}
+  [fit] random/graph {'neighbors': 300, 'alpha': 0.8, 'beta': 0.2}
+  [fit] random/two_tower seed=42 {'temperature': 0.01}
+  [fit] random/two_tower seed=43 {'temperature': 0.01}
+  [fit] random/two_tower seed=44 {'temperature': 0.01}
+[pipeline] ==== train done in 8378 s
+[pipeline] ==== evaluate  2026-10-13 06:01:45Z
+== evaluate ==
+[evaluate] temporal seed 42
+[evaluate] temporal seed 43
+[evaluate] temporal seed 44
+[evaluate] random seed 42
+[evaluate] random seed 43
+[evaluate] random seed 44
+[pipeline] ==== evaluate done in 398 s
+[pipeline] ==== serve  2026-10-13 06:08:23Z
+== serve ==
+[pipeline] ==== serve done in 5 s
+[pipeline] ==== report  2026-10-13 06:08:28Z
+== report ==
+{"A": true, "B": true, "C": true, "D": true}
+[pipeline] ==== report done in 3 s
+[pipeline] all stages OK. Resource use: sacct -j 1133598 --format=JobID,State,Elapsed,MaxRSS,AllocCPUS

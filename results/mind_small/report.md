@@ -1,6 +1,6 @@
-# Results (generated 2026-10-13T02:52:38.055451+00:00 from real runs)
+# Results (generated 2026-10-13T06:08:28.948324+00:00 from real runs)
 
-Seed 42, run date 2026-10-13T02:46:13.618063+00:00, config 78a29a2f03c2.
+Seed 42, run date 2026-10-13T06:01:52.707905+00:00, config bf917a05ade7.
 
 ## Dataset
 
@@ -13,6 +13,7 @@ MIND-small: 94,057 users, 65,238 items, 230,117 impressions, 347,727 clicks, CTR
 | temporal | 110549 | 20000 | 5369 | 0.025 | 0.615 | 0.490 | 0.609 |
 | temporal_val | 46301 | 20110 | 6144 | 0.005 | 0.615 | 0.641 | 0.662 |
 | random | 110110 | 20000 | 22771 | 0.005 | 0.181 | 0.011 | 0.590 |
+| temporal_rtrain | 47460 | 20828 | 6084 | 0.005 | 0.636 | 0.607 | 0.685 |
 
 ## Gates
 
@@ -31,8 +32,8 @@ MIND-small: 94,057 users, 65,238 items, 230,117 impressions, 347,727 clicks, CTR
 | itemknn | 0.0045 | 0.0027 | 0.0047 | 0.1523 | 0.0023 | 0.0739 |
 | graph | 0.0060 | 0.0035 | 0.0057 | 0.1484 | 0.0028 | 0.0740 |
 | two_tower | 0.0044 ± 0.0005 | 0.0025 ± 0.0004 | 0.0043 | 0.2702 ± 0.0268 | 0.0020 | 0.1257 |
-| gbdt (end-to-end) | 0.0487 ± 0.0129 | 0.0288 ± 0.0079 | - | 0.5456 ± 0.0202 | - | 0.3110 |
-| neural (end-to-end) | 0.0746 ± 0.0090 | 0.0435 ± 0.0083 | - | 0.5519 ± 0.0216 | - | 0.3409 |
+| gbdt (end-to-end) | 0.0446 ± 0.0181 | 0.0288 ± 0.0137 | - | 0.5367 ± 0.0244 | - | 0.3004 |
+| neural (end-to-end) | 0.0963 ± 0.0056 | 0.0660 ± 0.0008 | - | 0.5758 ± 0.0161 | - | 0.3541 |
 
 Orderings (retrieval, per-positive HR@10): full ['popular', 'graph', 'itemknn', 'two_tower'] vs sampled ['popular', 'two_tower', 'itemknn', 'graph'], Kendall τ = 0.00
 
@@ -45,13 +46,13 @@ Two-tower and the rankers are trained once per seed. Tables above show mean ± s
 | model | seed 42: full NDCG@10 / sampled HR@10 | seed 43: full NDCG@10 / sampled HR@10 | seed 44: full NDCG@10 / sampled HR@10 |
 |---|---|---|---|
 | two_tower | 0.0023 / 0.2608 | 0.0023 / 0.2493 | 0.0030 / 0.3004 |
-| gbdt | 0.0200 / 0.5455 | 0.0313 / 0.5658 | 0.0353 / 0.5254 |
-| neural | 0.0402 / 0.5282 | 0.0373 / 0.5569 | 0.0529 / 0.5706 |
+| gbdt | 0.0144 / 0.5350 | 0.0303 / 0.5619 | 0.0416 / 0.5133 |
+| neural | 0.0664 / 0.5576 | 0.0665 / 0.5816 | 0.0651 / 0.5882 |
 
 Method ordering per seed (retrieval, per-positive HR@10, full vs sampled):
 
-- seed 42: full ['popular', 'graph', 'itemknn', 'two_tower'] vs sampled ['popular', 'two_tower', 'itemknn', 'graph'], τ = 0.00; system τ = 0.33
-- seed 43: full ['popular', 'graph', 'itemknn', 'two_tower'] vs sampled ['popular', 'two_tower', 'itemknn', 'graph'], τ = 0.00; system τ = 0.33
+- seed 42: full ['popular', 'graph', 'itemknn', 'two_tower'] vs sampled ['popular', 'two_tower', 'itemknn', 'graph'], τ = 0.00; system τ = 0.47
+- seed 43: full ['popular', 'graph', 'itemknn', 'two_tower'] vs sampled ['popular', 'two_tower', 'itemknn', 'graph'], τ = 0.00; system τ = 0.47
 - seed 44: full ['popular', 'graph', 'two_tower', 'itemknn'] vs sampled ['popular', 'two_tower', 'itemknn', 'graph'], τ = 0.33; system τ = 0.73
 
 ### temporal: retrieval ceiling
@@ -62,8 +63,8 @@ Method ordering per seed (retrieval, per-positive HR@10, full vs sampled):
 | itemknn (own order) | 200 | 0.0735 | 0.0735 | 0.0045 | 0.061 | 0.9265 | 0.0690 |
 | graph (own order) | 200 | 0.0746 | 0.0746 | 0.0060 | 0.081 | 0.9254 | 0.0686 |
 | two_tower (own order) | 200 | 0.1119 | 0.1119 | 0.0044 | 0.040 | 0.8881 | 0.1075 |
-| union -> gbdt | 620 | 0.4254 | 0.4254 | 0.0487 | 0.114 | 0.5746 | 0.3767 |
-| union -> neural | 620 | 0.4254 | 0.4254 | 0.0746 | 0.175 | 0.5746 | 0.3508 |
+| union -> gbdt | 620 | 0.4254 | 0.4254 | 0.0446 | 0.104 | 0.5746 | 0.3808 |
+| union -> neural | 620 | 0.4254 | 0.4254 | 0.0963 | 0.226 | 0.5746 | 0.3291 |
 
 ### temporal: popularity decomposition
 
@@ -135,17 +136,28 @@ Method ordering per seed (retrieval, per-positive HR@10, full vs sampled):
 - **graph**: 48 grid points, best {'neighbors': 300, 'alpha': 0.8, 'beta': 0.2} -> full-catalog user ndcg@10 = 0.0063
 - **two_tower**: 6 grid points, best {'temperature': 0.01} -> full-catalog user ndcg@10 = 0.0039
 
+## Ranker selection (train 2019-11-13, select on 2019-11-14)
+
+Each ranker is trained on 2019-11-13 candidates and scored on 2019-11-14 (ndcg@10 within candidates, mean ± sd over seeds [42, 43, 44]). The chosen set is refit on 2019-11-14; temporal test is never used for this choice.
+
+| ranker | all | time_invariant | retrieval_only | chosen |
+|---|---|---|---|---|
+| gbdt | 0.0847 ± 0.0174 | 0.0783 ± 0.0048 | 0.0447 ± 0.0060 | all |
+| neural | 0.0912 ± 0.0247 | 0.0829 ± 0.0206 | 0.0475 ± 0.0042 | all |
+
+Feature sets: **all** = 20 features; **time_invariant** = 15 features; **retrieval_only** = 8 features
+
 ## ANN serving
 
 | index | setting | recall | p50 ms | p95 ms | p99 ms |
 |---|---|---|---|---|---|
-| exact | - | 1.000 | 0.058 | 0.062 | 0.065 |
-| hnsw | ef_search=16 | 0.966 | 0.062 | 0.080 | 0.088 |
-| hnsw | ef_search=32 | 0.966 | 0.062 | 0.079 | 0.088 |
-| hnsw | ef_search=64 | 0.966 | 0.062 | 0.079 | 0.089 |
-| hnsw | ef_search=128 | 0.979 | 0.074 | 0.093 | 0.103 |
-| hnsw | ef_search=256 | 0.996 | 0.125 | 0.149 | 0.169 |
+| exact | - | 1.000 | 0.057 | 0.060 | 0.063 |
+| hnsw | ef_search=16 | 0.966 | 0.062 | 0.079 | 0.088 |
+| hnsw | ef_search=32 | 0.966 | 0.062 | 0.079 | 0.089 |
+| hnsw | ef_search=64 | 0.966 | 0.062 | 0.079 | 0.088 |
+| hnsw | ef_search=128 | 0.979 | 0.072 | 0.092 | 0.102 |
+| hnsw | ef_search=256 | 0.996 | 0.124 | 0.149 | 0.166 |
 | ivf | nprobe=1 | 0.141 | 0.011 | 0.012 | 0.014 |
 | ivf | nprobe=4 | 0.384 | 0.017 | 0.019 | 0.021 |
-| ivf | nprobe=16 | 0.738 | 0.027 | 0.030 | 0.033 |
-| ivf | nprobe=64 | 0.984 | 0.045 | 0.049 | 0.054 |
+| ivf | nprobe=16 | 0.738 | 0.027 | 0.030 | 0.032 |
+| ivf | nprobe=64 | 0.984 | 0.045 | 0.048 | 0.051 |

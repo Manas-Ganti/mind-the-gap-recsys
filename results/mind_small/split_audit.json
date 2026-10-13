@@ -93,5 +93,37 @@
       "cold_positive_rate": 0.011197893016074835,
       "cold_catalog_rate": 0.5900048307057222
     }
+  },
+  "temporal_rtrain": {
+    "meta": {
+      "name": "temporal_rtrain",
+      "reference_ts": 1573603200,
+      "train_pairs": 2152240,
+      "test_pairs_before_reclick_removal": 47715,
+      "test_pairs": 47460,
+      "reclicks_removed": 255,
+      "test_users": 20828,
+      "eval_users": 20828,
+      "catalog_size": 6084,
+      "history_policy": "snapshot",
+      "catalog_days": 1,
+      "mean_items_per_day": 6084.0,
+      "n_negatives": 100,
+      "negatives_min": 100,
+      "negatives_mean": 100.0,
+      "pairs_short_of_negatives": 0,
+      "history_items_first_shown_after_cutoff": 55
+    },
+    "audit": {
+      "checks": [
+        "no_train_test_overlap",
+        "positives_live_on_click_day",
+        "temporal_order"
+      ],
+      "cold_user_rate": 0.00547340119070482,
+      "cold_item_rate": 0.6357935359382537,
+      "cold_positive_rate": 0.6071428571428571,
+      "cold_catalog_rate": 0.685404339250493
+    }
   }
 }
