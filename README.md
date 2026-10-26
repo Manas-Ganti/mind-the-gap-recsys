@@ -11,10 +11,14 @@ can invert the conclusion entirely. This project builds a working two-stage reco
 then measures what each of those three shortcuts costs, on the same data, with the same
 models.
 
-> **Status: code-complete, not yet run on MIND.** Every results section below is empty on
-> purpose. Numbers will appear only after a real run produces `results/metrics.json`. The
-> pipeline has been exercised end to end only on tiny synthetic data, and those outputs live
-> in `smoke/`. They are pipeline checks, not results.
+> **Status: run end to end on MIND-small.** Metrics are in `results/mind_small/metrics.json`
+> and the tables generated from them in `results/mind_small/report.md` (seed 42; two-tower and
+> both rankers also trained at seeds 43 and 44). All four gates pass
+> (`results/mind_small/gates.json`), and the harness checks (oracle, anti-oracle, random scorer
+> against its closed form) report `all_pass: true` on both splits
+> (`results/mind_small/harness_check_temporal.json`, `results/mind_small/harness_check_random.json`).
+> Every number below is copied from `results/mind_small/report.md` unless another file is named.
+> The outputs in `smoke/` come from tiny synthetic data; they are pipeline checks, not results.
 
 ## The rules
 
@@ -84,15 +88,29 @@ Each is a question with a pre-stated measurement. Answers go here **only** from 
 
 1. **Temporal vs random split.** How much does a random split inflate each method? This
    also reports cold-start rates per split, which explain much of the gap.
-   *Not yet run.*
+   *MIND-small:* the random split inflates full-catalog NDCG@10 for every method: popular
+   2.11x, item-kNN 4.54x, graph 7.44x, two-tower 36.42x (two-tower 0.0025 temporal vs 0.0923
+   random). The cold-positive rate is 0.490 on the temporal split and 0.011 on the random split
+   (split audit table; `results/mind_small/split_audit.json`).
 2. **Sampled vs full-catalog ordering.** Does the ranking of methods change between the
    two protocols? Measured as Kendall τ between the orderings, over the retrieval methods
    and over the whole system including rankers.
-   *Not yet run.*
+   *MIND-small:* on the temporal split the retrieval ordering changes, Kendall τ = 0.00
+   (full catalog: popular, graph, itemknn, two_tower; sampled: popular, two_tower, itemknn,
+   graph). Per seed (42, 43, 44) it is τ = 0.00, 0.00, 0.33. Over the whole system
+   τ = 0.47. On the random split the retrieval τ = 0.67.
 3. **Tuned item-kNN vs neural.** Does the two-tower model beat a seriously tuned item-kNN
    on full-catalog metrics? If it doesn't, that is the result.
-   *Not yet run.*
-4. **Retrieval ceiling.** Is the system limited by retrieval or by ranking? *Not yet run.*
+   *MIND-small:* it doesn't, on the temporal split. Item-kNN (120 grid points, all evaluated
+   before two-tower training started; `results/mind_small/gates.json`, gate C) scores full
+   Recall@10 0.0045 / NDCG@10 0.0027; two-tower scores 0.0044 ± 0.0005 / 0.0025 ± 0.0004
+   (mean ± sd over seeds). Under sampled negatives the two-tower looks better (HR@10
+   0.2702 ± 0.0268 vs 0.1523). On the random split the two-tower leads (NDCG@10 0.0923 vs
+   0.0123).
+4. **Retrieval ceiling.** Is the system limited by retrieval or by ranking? *MIND-small:*
+   by retrieval. On the temporal split the union of candidates fed to the rankers has a
+   Recall@10 ceiling of 0.4254, so retrieval loss is 0.5746; ranking loss is 0.3291 for the
+   neural ranker and 0.3808 for the GBDT (see the table below).
 
 ## The retrieval ceiling
 
@@ -111,7 +129,18 @@ each ranker. Gate D requires every ceiling to be computed before any end-to-end 
 no end-to-end number may exceed its ceiling. Tests check the bound by construction, with
 random reorderings, and check that the ideal reordering attains it exactly.
 
-*Results: not yet run.*
+*Results, MIND-small temporal split* (gate D passes, `results/mind_small/gates.json`):
+
+| pipeline | candidates | retrieval recall@K | ceiling Recall@10 | end-to-end Recall@10 | fraction of ceiling | retrieval loss | ranking loss |
+|---|---|---|---|---|---|---|---|
+| popular (own order) | 200 | 0.2982 | 0.2982 | 0.0740 | 0.248 | 0.7018 | 0.2242 |
+| itemknn (own order) | 200 | 0.0735 | 0.0735 | 0.0045 | 0.061 | 0.9265 | 0.0690 |
+| graph (own order) | 200 | 0.0746 | 0.0746 | 0.0060 | 0.081 | 0.9254 | 0.0686 |
+| two_tower (own order) | 200 | 0.1119 | 0.1119 | 0.0044 | 0.040 | 0.8881 | 0.1075 |
+| union -> gbdt | 620 | 0.4254 | 0.4254 | 0.0446 | 0.104 | 0.5746 | 0.3808 |
+| union -> neural | 620 | 0.4254 | 0.4254 | 0.0963 | 0.226 | 0.5746 | 0.3291 |
+
+The random-split table is in `results/mind_small/report.md`.
 
 ## Popularity decomposition
 
@@ -122,7 +151,11 @@ For each method:
 - IPS-weighted metrics with weight 1/(pop+1)^γ, where γ is a modelling choice set in the
   config
 
-*Results: not yet run.*
+*Results, MIND-small temporal split:* 0.487 of test positives fall in the cold bucket.
+Popular, item-kNN and graph all score HR@10 0.0000 on cold items; two-tower scores 0.0021. The
+share of hits a popularity ranker also gets is 0.057 for item-kNN, 0.079 for graph and 0.041 for
+two-tower. On the random split it is 0.600 for two-tower. The full tables, including the IPS
+and tail / torso / head columns, are in `results/mind_small/report.md`.
 
 ## Running it
 
